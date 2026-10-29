@@ -54,6 +54,12 @@ ITS = """/dts-v1/;
             entry = <{load:#x}>;
             hash@1 {{ algo = "sha1"; }};
         }};
+        pad@1 {{
+            description = "pad";
+            data = /incbin/("{pad}");
+            type = "data";
+            compression = "none";
+        }};
         filesystem@1 {{
             description = "rootfs";
             data = /incbin/("{rootfs}");
@@ -94,12 +100,30 @@ def main():
     ap.add_argument("--mkimage", default="mkimage")
     a = ap.parse_args()
 
+    TARGET_ROOTFS_OFFSET = 0x700000  # 7 MiB boundary for mtdblock3 / mtdblock6
+    TARGET_FIT_OFFSET = TARGET_ROOTFS_OFFSET - 0x2100
+
     with tempfile.TemporaryDirectory() as t:
         its = os.path.join(t, "image.its")
         fit = os.path.join(t, "image.fit")
-        open(its, "w").write(ITS.format(dtb=a.dtb, kernel=a.kernel, rootfs=a.rootfs, load=LOAD))
+        pad = os.path.join(t, "pad.bin")
+
+        # Two-pass calibration to place filesystem@1 precisely at TARGET_FIT_OFFSET
+        pad_sz = 3000000
+        open(pad, "wb").write(b"\xff" * pad_sz)
+        open(its, "w").write(ITS.format(dtb=a.dtb, kernel=a.kernel, pad=pad, rootfs=a.rootfs, load=LOAD))
         subprocess.run([a.mkimage, "-f", its, fit], check=True, stdout=subprocess.DEVNULL)
         fitb = open(fit, "rb").read()
+        curr = fitb.find(b"hsqs")
+        diff = TARGET_FIT_OFFSET - curr
+        pad_sz += diff
+        open(pad, "wb").write(b"\xff" * pad_sz)
+        open(its, "w").write(ITS.format(dtb=a.dtb, kernel=a.kernel, pad=pad, rootfs=a.rootfs, load=LOAD))
+        subprocess.run([a.mkimage, "-f", its, fit], check=True, stdout=subprocess.DEVNULL)
+        fitb = open(fit, "rb").read()
+        final_off = fitb.find(b"hsqs")
+        if final_off != TARGET_FIT_OFFSET:
+            sys.exit(f"filesystem@1 at {final_off:#x}, expected {TARGET_FIT_OFFSET:#x}")
 
     # fdt@1 must sit in the first 0x800 bytes stock U-Boot reads
     i = fitb.find(b"fdt@1\0", struct.unpack(">I", fitb[8:12])[0])
@@ -138,6 +162,8 @@ def main():
     # Verify stock platform_check_image chip ID requirement at offset 8785
     if out[8785:8789] != b"7581":
         sys.exit(f"Offset 8785 must be '7581' for stock GUI verification, got {out[8785:8789]!r}")
+    if out[TARGET_ROOTFS_OFFSET:TARGET_ROOTFS_OFFSET + 4] != b"hsqs":
+        sys.exit(f"Squashfs magic not at {TARGET_ROOTFS_OFFSET:#x}, got {out[TARGET_ROOTFS_OFFSET:TARGET_ROOTFS_OFFSET + 4]!r}")
     open(a.out, "wb").write(out)
     print(f"{a.out}: {len(out)} bytes  FIT={len(fitb)}  kernel={ksz}  rootfs={rsz}  crc={crc:#010x}")
 
