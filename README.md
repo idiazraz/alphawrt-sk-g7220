@@ -34,6 +34,20 @@ Check the SoC marking or the U-Boot banner. The colour alone may not tell you th
 
 Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
 
+## Port estimate (2026-10-29)
+Black first. White stays RAM-boot only while its signed FIT blocks flash installs.
+
+| Black step | Estimate |
+|---|---|
+| RAM boot: Ethernet, Wi-Fi, LEDs, buttons | 1-3 days |
+| `tclinux` image and install from stock (GN630V tooling) | 2-4 days |
+| AlphaWRT packages and tests | 2-3 days |
+| GPON (full ONT replacement) | 3-6 weeks, uncertain |
+
+Why the black board is quick: `airoha/an7581` already has EN7581 + MT7992 boards (`an7581-w1700k`, Nokia XG-040G-MD, `an7581-npu-mt7992.dtsi`), NPU Wi-Fi offload works for the MT7992, and stock images are only SHA-1 hashed.
+
+Why GPON is slow: the open xPON drivers only match `airoha,en7523-xpon`. The EN7581 stock FDT has the same PON PHY (`0x1faf0000`) and xMAC (`0x1fb6xxxx`) blocks, but adds a USXGMII SerDes (`xpon_usxgmii@1fa80000`) between PON and the frame engine. The optics chip and its calibration offset are not known yet. Fallback if GPON stalls: ship as a Wi-Fi 7 router or bridge behind the ISP ONT.
+
 ## Layout
 - `white/`: the AN7583 port. `an7583-skyworth-sk-g7220.dts`, `02_network` (from `target/linux/airoha/an7583/base-files/etc/board.d/`), `boot_runner.py` (handles the U-Boot login, PCIe register writes and TFTP RAM boot; the password comes from `UBOOT_PWD`), `uboot-login.sh`, the minimal `ramtest/` DTS and FIT, and the bring-up log in `BRINGUP.md`.
 - `black/`: the EN7581 port. So far only the stock device tree (`stock-fdt.dts`, the reference for `en7581-skyworth-sk-g7220.dts`) and `listen_black.py` (UART logger).
