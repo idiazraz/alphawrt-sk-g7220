@@ -79,7 +79,7 @@ Files in `port/ramtest/` (see `SHA256SUMS` there):
 - `sk-g7220-ramtest.itb`: unsigned FIT, only for probing the signature policy.
 
 Setup: Mac on 192.168.1.126/24 cabled to a LAN jack, TFTP server serving
-`port/ramtest` (`python3 -I tools/tftp_lockstep.py --dir backup/sk-g7220/port/ramtest --bind 0.0.0.0 --port 69`),
+`port/ramtest` (`python3 -I tools/tftp_lockstep.py --dir backup/port/ramtest --bind 0.0.0.0 --port 69`),
 UART at 115200. U-Boot env already has `ipaddr=192.168.1.1`, `serverip=192.168.1.126`.
 
 Checked 2026-10-28 on the board: U-Boot 2023.04 asks for a UserName/Password

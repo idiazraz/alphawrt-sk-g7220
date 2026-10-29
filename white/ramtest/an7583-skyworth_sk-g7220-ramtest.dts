@@ -11,7 +11,7 @@
  *  - all four switch PHYs and the EN8811H are enabled under neutral names so
  *    the test shows which jacks are wired where (stock: 4 LAN, eth0.2-5).
  * PCIe (MT7992) is left out: upstream an7583.dtsi has no PCIe nodes yet.
- * Evidence for every value: backup/sk-g7220/port/HARDWARE.md.
+ * Evidence for every value: backup/port/HARDWARE.md.
  */
 
 /dts-v1/;

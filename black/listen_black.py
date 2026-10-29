@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SK-G7220 Black runner & interactive console for ECNT> prompt.
-Logs all output to backup/sk-g7220/black-uart.log.
-Listens for commands from backup/sk-g7220/cmd.in.
+Logs all output to backup/black-uart.log.
+Listens for commands from backup/cmd.in.
 
 Auto-login flow after power-cycle:
   1. Intercept "Hit any key to stop autoboot" with Enter.
@@ -15,13 +15,9 @@ It is never written to the log or to stdout.
 import os, sys, select, termios, time
 
 PORT = "/dev/cu.usbserial-1120"
-if os.path.isdir("backup/sk-g7220"):
-    LOG_PATH = "backup/sk-g7220/black-uart.log"
-    CMD_FILE = "backup/sk-g7220/cmd.in"
-else:
-    os.makedirs("backup", exist_ok=True)
-    LOG_PATH = "backup/black-uart.log"
-    CMD_FILE = "backup/cmd.in"
+os.makedirs("backup", exist_ok=True)
+LOG_PATH = "backup/black-uart.log"
+CMD_FILE = "backup/cmd.in"
 
 UBOOT_PWD = os.environ.get("UBOOT_PWD", "")
 
