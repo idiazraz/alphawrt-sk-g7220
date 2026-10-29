@@ -283,6 +283,7 @@
 	nvmem-cells = <&base_mac (0)>;
 };
 
+/* MT7992 second PCIe function (hif2) */
 &pcie0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie0_rst_pins>;
@@ -299,12 +300,11 @@
 			reg = <0x0000 0 0 0 0>;
 			airoha,npu = <&npu>;
 			airoha,eth = <&eth>;
-			nvmem-cells = <&eeprom_mt7992>, <&base_mac (2)>;
-			nvmem-cell-names = "eeprom", "mac-address";
 		};
 	};
 };
 
+/* MT7992 main function: owns the calibration data */
 &pcie1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie1_rst_pins>;
@@ -321,6 +321,8 @@
 			reg = <0x0000 0 0 0 0>;
 			airoha,npu = <&npu>;
 			airoha,eth = <&eth>;
+			nvmem-cells = <&eeprom_mt7992>, <&base_mac (2)>;
+			nvmem-cell-names = "eeprom", "mac-address";
 		};
 	};
 };

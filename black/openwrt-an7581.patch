@@ -14,7 +14,7 @@ index b0d0fd8590..1ea8920225 100644
  		# Both copper ports are LAN; the upstream connection is PON.
  		ucidef_set_interface_lan "lan1 lan2"
 diff --git a/target/linux/airoha/image/an7581.mk b/target/linux/airoha/image/an7581.mk
-index bf5962abaa..dd9c98cb4f 100644
+index bf5962abaa..e1e7ca34fd 100644
 --- a/target/linux/airoha/image/an7581.mk
 +++ b/target/linux/airoha/image/an7581.mk
 @@ -197,3 +197,16 @@ define Device/quantum_q1000k-ubi
@@ -29,7 +29,7 @@ index bf5962abaa..dd9c98cb4f 100644
 +  DEVICE_VARIANT := Black
 +  DEVICE_DTS := en7581-skyworth-sk-g7220
 +  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-phy-airoha-en8811h \
-+	kmod-usb3 airoha-en7581-npu-firmware kmod-mt7992-firmware wpad-basic-mbedtls
++	kmod-usb3 airoha-en7581-npu-firmware kmod-mt7992-firmware wpad-mbedtls
 +  # Note: RAM boot only for now; the tclinux flash image comes later
 +  IMAGES :=
 +endef

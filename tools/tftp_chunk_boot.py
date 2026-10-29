@@ -26,6 +26,7 @@ a = termios.tcgetattr(fd)
 a[0] = a[1] = a[3] = 0
 a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
 a[4] = a[5] = termios.B115200
+a[6][termios.VMIN], a[6][termios.VTIME] = 0, 0           # reads return at once; select() does the waiting
 termios.tcsetattr(fd, termios.TCSANOW, a)
 
 
