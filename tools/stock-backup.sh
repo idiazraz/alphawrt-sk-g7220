@@ -6,11 +6,11 @@
 #
 # Each /dev/mtdNro is pulled twice and must hash the same both times and match
 # the board's own sha256sum and the /proc/mtd size; otherwise the script stops.
-# Output: backup/sk-g7220/dump-<date>/ (gitignored, private: holds MACs,
+# Output: backup/dump-<date>/ (gitignored, private: holds MACs,
 # calibration, GPON identity, verity hash).
 set -euo pipefail
 H=${1:-admin@192.168.0.1}
-OUT=$(cd "$(dirname "$0")/.." && pwd)/dump-$(date +%Y%m%d-%H%M)
+OUT=$(cd "$(dirname "$0")/.." && pwd)/backup/dump-$(date +%Y%m%d-%H%M)
 mkdir -p "$OUT"/mtd "$OUT"/info
 cd "$OUT"
 SSH="ssh -o ControlMaster=auto -o ControlPath=/tmp/sk-ssh-%r@%h -o ControlPersist=120 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/gn630v $H"

@@ -39,9 +39,10 @@ Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
 - `black/`: the EN7581 port. So far only the stock device tree (`stock-fdt.dts`, the reference for `en7581-skyworth-sk-g7220.dts`) and `listen_black.py` (UART logger).
 - `tools/`: `uart.py` (UART logger that stops autoboot and takes commands from a FIFO), `serial_cmd.py`, `stock-backup.sh` (read-only partition dump over SSH from stock).
 - `docs/`: hardware notes for both boards and the RAM-boot procedure.
-
-Run the serial scripts from the AlphaWRT workspace root. They write logs and `cmd.in` under `backup/sk-g7220/`, outside this repo.
+- `white/openwrt-an7583.patch`: the device profile and board.d changes for the OpenWrt tree.
 - The AlphaWRT packages (`alphawrt-ui`, `alphawrt-pihole`, `luci-theme-alphawrt`, ...) are not copied here. The build takes them from the GN630V repo, so both boxes get the same UI.
+
+Run the serial scripts from this repo's root. Logs, `cmd.in`, dumps and TFTP files go in `backup/`, which git ignores.
 
 ## License
 GPL-2.0, see [LICENSE](LICENSE).

@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """SK-G7220 Black runner & interactive console for ECNT> prompt.
-Logs all output to backup/sk-g7220/black-uart.log.
-Listens for commands from backup/sk-g7220/cmd.in.
+Logs all output to backup/black-uart.log.
+Listens for commands from backup/cmd.in.
 """
 import os, sys, select, termios, time
 
 PORT = "/dev/cu.usbserial-1120"
-LOG_PATH = "backup/sk-g7220/black-uart.log"
-CMD_FILE = "backup/sk-g7220/cmd.in"
+if os.path.isdir("backup/sk-g7220"):
+    LOG_PATH = "backup/sk-g7220/black-uart.log"
+    CMD_FILE = "backup/sk-g7220/cmd.in"
+else:
+    os.makedirs("backup", exist_ok=True)
+    LOG_PATH = "backup/black-uart.log"
+    CMD_FILE = "backup/cmd.in"
 
 def open_port():
     fd = os.open(PORT, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)

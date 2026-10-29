@@ -13,7 +13,7 @@ def opt(name, default):
 
 here = os.path.dirname(os.path.abspath(__file__))
 PORT = opt("--port", "/dev/cu.usbserial-1120")
-LOG = opt("--log", os.path.join(here, "..", "uart-%s.log" % time.strftime("%Y%m%d-%H%M%S")))
+LOG = opt("--log", os.path.join(here, "..", "backup", "uart-%s.log" % time.strftime("%Y%m%d-%H%M%S")))
 FIFO = opt("--fifo", os.path.join(here, "uart.in"))
 STOP = "--no-stop" not in sys.argv
 

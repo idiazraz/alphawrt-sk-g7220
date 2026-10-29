@@ -7,8 +7,8 @@ Keeps connection open with command file interface for interactive shell.
 import os, sys, select, termios, time
 
 PORT = "/dev/cu.usbserial-1120"
-LOG_PATH = "backup/sk-g7220/uart-session.log"
-CMD_FILE = "backup/sk-g7220/cmd.in"
+LOG_PATH = "backup/uart-session.log"
+CMD_FILE = "backup/cmd.in"
 
 if len(sys.argv) > 1 and sys.argv[1] != "--reboot":
     PASSWORD = sys.argv[1].encode()
