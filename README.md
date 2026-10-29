@@ -25,11 +25,11 @@ Check the SoC marking or the U-Boot banner. The colour alone may not tell you th
 | | Black (EN7581) | White (AN7583) |
 |---|---|---|
 | Serial console | Yes | Yes |
-| RAM boot (initramfs) | Not yet | Yes, kernel 6.18 |
-| Device tree | Stock reference only | Written, compiles |
-| Ethernet | — | 2x 2.5G (EN8811H), 1G switch LAN2-4 |
-| USB, LEDs, buttons | — | Yes |
-| Wi-Fi (PCIe + MT7992) | — | PCIe link not up yet |
+| RAM boot (initramfs) | Yes, kernel 6.18 (4 CPUs, 1 GiB) | Yes, kernel 6.18 |
+| Device tree | Written, boots | Written, compiles |
+| Ethernet | LAN1 2.5G (EN8811H) passes traffic; LAN2-4 switch up | 2x 2.5G (EN8811H), 1G switch LAN2-4 |
+| USB, LEDs, buttons | Yes | Yes |
+| Wi-Fi (PCIe + MT7992) | PCIe up, MT7992 found; driver not in test image | PCIe link not up yet |
 | Flash install | — | — (signed FIT blocks it) |
 
 Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
