@@ -1,0 +1,54 @@
+diff --git a/target/linux/airoha/an7583/base-files/etc/board.d/01_leds b/target/linux/airoha/an7583/base-files/etc/board.d/01_leds
+index dbe380ec55..c2847d0dbe 100644
+--- a/target/linux/airoha/an7583/base-files/etc/board.d/01_leds
++++ b/target/linux/airoha/an7583/base-files/etc/board.d/01_leds
+@@ -9,6 +9,9 @@ board_config_update
+ board=$(board_name)
+ 
+ case "$board" in
++skyworth,sk-g7220)
++	ucidef_set_led_netdev "wan" "wan" "green:wan" "wan" "link tx rx"
++	;;
+ nokia,xg-040g-mf|\
+ nokia,xg-040g-mf-ubi)
+ 	ucidef_set_led_netdev "lan2" "lan2" "mt7530-0:0a:green:lan-2" "lan2" "link tx rx"
+diff --git a/target/linux/airoha/an7583/base-files/etc/board.d/02_network b/target/linux/airoha/an7583/base-files/etc/board.d/02_network
+index 952e2ddc88..d0f3439945 100644
+--- a/target/linux/airoha/an7583/base-files/etc/board.d/02_network
++++ b/target/linux/airoha/an7583/base-files/etc/board.d/02_network
+@@ -14,6 +14,15 @@ an7583_setup_interfaces()
+ 	airoha,an7583-evb)
+ 		ucidef_set_interface_lan "lan1 lan2 lan3 lan4 eth1"
+ 		;;
++	skyworth,sk-g7220)
++		local mac
++		mac=$(mtd_get_mac_ascii "art" 0)
++		if [ -n "$mac" ]; then
++			ucidef_set_interface_macaddr "lan" "$mac"
++			ucidef_set_interface_macaddr "wan" "$(macaddr_add "$mac" 1)"
++		fi
++		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
++		;;
+ 	nokia,xg-040g-mf|\
+ 	nokia,xg-040g-mf-ubi)
+ 		ucidef_set_interface_lan "lan1 lan2 lan3 lan4"
+diff --git a/target/linux/airoha/image/an7583.mk b/target/linux/airoha/image/an7583.mk
+index c0c77f14c0..8d1caa3d8c 100644
+--- a/target/linux/airoha/image/an7583.mk
++++ b/target/linux/airoha/image/an7583.mk
+@@ -91,3 +91,15 @@ define Device/nokia_xg-040g-mf-ubi
+   ARTIFACTS := bl31-uboot.fip preloader.bin
+ endef
+ TARGET_DEVICES += nokia_xg-040g-mf-ubi
++
++define Device/skyworth_sk-g7220
++  $(call Device/FitImageLzma)
++  DEVICE_VENDOR := Skyworth
++  DEVICE_MODEL := SK-G7220
++  DEVICE_DTS := an7583-skyworth-sk-g7220
++  DEVICE_DTS_CONFIG := config@1
++  BLOCKSIZE := 128k
++  PAGESIZE := 2048
++  DEVICE_PACKAGES := kmod-phy-airoha-en8811h airoha-en8811h-firmware
++endef
++TARGET_DEVICES += skyworth_sk-g7220
