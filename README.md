@@ -35,8 +35,12 @@ Check the SoC marking or the U-Boot banner. The colour alone may not tell you th
 Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
 
 ## Layout
-- `dts/` (not added yet): one device tree per variant (`en7581-skyworth-sk-g7220.dts`, `an7583-skyworth-sk-g7220.dts`).
-- `docs/`: hardware notes and the RAM-boot procedure.
+- `white/`: the AN7583 port. `an7583-skyworth-sk-g7220.dts`, `02_network` (from `target/linux/airoha/an7583/base-files/etc/board.d/`), `boot_runner.py` (handles the U-Boot login, PCIe register writes and TFTP RAM boot; the password comes from `UBOOT_PWD`), `uboot-login.sh`, the minimal `ramtest/` DTS and FIT, and the bring-up log in `BRINGUP.md`.
+- `black/`: the EN7581 port. So far only the stock device tree (`stock-fdt.dts`, the reference for `en7581-skyworth-sk-g7220.dts`) and `listen_black.py` (UART logger).
+- `tools/`: `uart.py` (UART logger that stops autoboot and takes commands from a FIFO), `serial_cmd.py`, `stock-backup.sh` (read-only partition dump over SSH from stock).
+- `docs/`: hardware notes for both boards and the RAM-boot procedure.
+
+Run the serial scripts from the AlphaWRT workspace root. They write logs and `cmd.in` under `backup/sk-g7220/`, outside this repo.
 - The AlphaWRT packages (`alphawrt-ui`, `alphawrt-pihole`, `luci-theme-alphawrt`, ...) are not copied here. The build takes them from the GN630V repo, so both boxes get the same UI.
 
 ## License

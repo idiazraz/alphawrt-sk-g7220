@@ -1,0 +1,30 @@
+/dts-v1/;
+/ {
+	description = "SK-G7220 RAM test: OpenWrt snapshot r37758 kernel+initramfs (Nokia XG-040G-MF build) + SK-G7220 ramtest DTB";
+	#address-cells = <1>;
+	images {
+		kernel-1 {
+			description = "ARM64 OpenWrt Linux-6.18.55";
+			data = /incbin/("kernel-1.lzma");
+			type = "kernel"; arch = "arm64"; os = "linux"; compression = "lzma";
+			load = <0x80200000>; entry = <0x80200000>;
+			hash-1 { algo = "crc32"; };
+			hash-2 { algo = "sha1"; };
+		};
+		fdt-1 {
+			description = "an7583-skyworth_sk-g7220-ramtest";
+			data = /incbin/("ramtest.dtb");
+			type = "flat_dt"; arch = "arm64"; compression = "none";
+			hash-1 { algo = "crc32"; };
+			hash-2 { algo = "sha1"; };
+		};
+	};
+	configurations {
+		default = "config@1";
+		config@1 {
+			description = "SK-G7220 RAM test";
+			kernel = "kernel-1";
+			fdt = "fdt-1";
+		};
+	};
+};

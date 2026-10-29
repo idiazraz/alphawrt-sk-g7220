@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * Skyworth SK-G7220 (white), AN7583. RAM-TEST ONLY.
+ *
+ * Built for one purpose: TFTP-boot an initramfs from the stock U-Boot and
+ * look at the hardware without changing flash. So:
+ *  - every NAND partition is read-only, and no BMT driver is attached
+ *    (stock uses the vendor BMT; blocks it remapped read back unmapped here);
+ *  - no LEDs or buttons except the power LED (GPIO 7, active low), which the
+ *    stock U-Boot FDT and the cmdline power_gpio=07 both name;
+ *  - all four switch PHYs and the EN8811H are enabled under neutral names so
+ *    the test shows which jacks are wired where (stock: 4 LAN, eth0.2-5).
+ * PCIe (MT7992) is left out: upstream an7583.dtsi has no PCIe nodes yet.
+ * Evidence for every value: backup/sk-g7220/port/HARDWARE.md.
+ */
+
+/dts-v1/;
+#include <dt-bindings/leds/common.h>
+#include <dt-bindings/gpio/gpio.h>
+#include "an7583.dtsi"
+
+/ {
+	model = "Skyworth SK-G7220 (RAM test)";
+	compatible = "skyworth,sk-g7220", "airoha,an7583";
+
+	aliases {
+		serial0 = &uart1;
+	};
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x20000000>;	/* 512 MiB, U-Boot dram */
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_power: led-0 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_POWER;
+			gpios = <&an7583_pinctrl 7 GPIO_ACTIVE_LOW>;
+			default-state = "on";
+		};
+	};
+};
+
+&an7583_pinctrl {
+	gpio-ranges = <&an7583_pinctrl 0 2 53>;
+
+	mdio0_pins: mdio0-pins {
+		mux {
+			function = "mdio";
+			groups = "mdio";
+		};
+		conf {
+			pins = "mdio_0";
+			output-high;
+		};
+	};
+
+	spi_pins: spi-pins {
+		mux {
+			function = "spi";
+			groups = "spi";
+		};
+	};
+};
+
+&snfi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi_pins>;
+	status = "okay";
+};
+
+&spi_nand {
+	/* Foresee F35SQB002G, 256 MiB, 2 KiB pages, 128 KiB blocks. Same ECC
+	 * setting as the Nokia AN7583: must match the bootloader. */
+	nand-ecc-mode = "none";
+	nand-ecc-step-size = <2048>;
+	nand-ecc-strength = <0>;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* Stock Linux /proc/mtd, not U-Boot's partitions= env (wrong ART). */
+		partition@0 {
+			label = "bootloader";
+			reg = <0x0 0x80000>;
+			read-only;
+		};
+		partition@80000 {
+			label = "kernel";
+			reg = <0x80000 0x700000>;
+			read-only;
+		};
+		partition@780000 {
+			label = "filesystem";
+			reg = <0x780000 0x4400000>;
+			read-only;
+		};
+		partition@4b80000 {
+			label = "kernel_slave";
+			reg = <0x4b80000 0x700000>;
+			read-only;
+		};
+		partition@5280000 {
+			label = "filesystem_slave";
+			reg = <0x5280000 0x4400000>;
+			read-only;
+		};
+		partition@9680000 {
+			label = "rootfs_data";
+			reg = <0x9680000 0x800000>;
+			read-only;
+		};
+		partition@9e80000 {
+			label = "ubifs";
+			reg = <0x9e80000 0x2000000>;
+			read-only;
+		};
+		partition@be80000 {
+			/* U-Boot FDT: bootflag-offset = 0x0be80000 */
+			label = "others";
+			reg = <0xbe80000 0x200000>;
+			read-only;
+		};
+		partition@c080000 {
+			/* hole between others and art; contents unknown */
+			label = "gap";
+			reg = <0xc080000 0x1c00000>;
+			read-only;
+		};
+		partition@dc80000 {
+			label = "art";
+			reg = <0xdc80000 0x380000>;
+			read-only;
+		};
+		partition@e000000 {
+			/* vendor BMT pool area */
+			label = "reserved_bmt";
+			reg = <0xe000000 0x2000000>;
+			read-only;
+		};
+	};
+};
+
+&i2c0 {
+	/* EN7571 BOSA lives here (stock: "find 7571 on I2C bus[0]"). Only
+	 * enabled so i2cdetect can see it; no driver binds. */
+	status = "okay";
+};
+
+&eth {
+	status = "okay";
+};
+
+&eth_pcs {
+	status = "okay";
+};
+
+&gdm1 {
+	status = "okay";
+};
+
+&switch {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&mdio0_pins>;
+};
+
+/* Stock initialised switch PHYs 9-12 (gsw_phy1-4). Names are neutral on
+ * purpose until the jacks are mapped. */
+&gsw_port1 {
+	status = "okay";
+	label = "gsw1";
+};
+
+&gsw_phy1 {
+	status = "okay";
+};
+
+&gsw_port2 {
+	status = "okay";
+	label = "gsw2";
+};
+
+&gsw_phy2 {
+	status = "okay";
+};
+
+&gsw_port3 {
+	status = "okay";
+	label = "gsw3";
+};
+
+&gsw_phy3 {
+	status = "okay";
+};
+
+&gsw_port4 {
+	status = "okay";
+	label = "gsw4";
+};
+
+&gsw_phy4 {
+	status = "okay";
+};
+
+&mdio_0 {
+	/* Stock: EN8811H answers at 0x0e and 0x0f; 0x0f is "SERDES_ETH".
+	 * No reset GPIO: stock never names one, and toggling a guessed pin
+	 * is a board change. */
+	en8811: ethernet-phy@f {
+		compatible = "ethernet-phy-id03a2.a411";
+		reg = <0xf>;
+	};
+};
+
+&gdm3 {
+	status = "okay";
+	openwrt,netdev-name = "eth25g";
+	phy-handle = <&en8811>;
+	phy-mode = "2500base-x";
+};
