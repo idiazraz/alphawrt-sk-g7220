@@ -1,0 +1,36 @@
+diff --git a/target/linux/airoha/an7581/base-files/etc/board.d/02_network b/target/linux/airoha/an7581/base-files/etc/board.d/02_network
+index b0d0fd8590..1ea8920225 100644
+--- a/target/linux/airoha/an7581/base-files/etc/board.d/02_network
++++ b/target/linux/airoha/an7581/base-files/etc/board.d/02_network
+@@ -24,6 +24,10 @@ an7581_setup_interfaces()
+ 	nokia,xg-040g-md-ubi)
+ 		ucidef_set_interface_lan "lan1 lan2 lan3 lan4"
+ 		;;
++	skyworth,sk-g7220)
++		# All copper ports are LAN; the upstream connection is PON.
++		ucidef_set_interface_lan "lan1 lan2 lan3 lan4"
++		;;
+ 	quantum,q1000k-ubi)
+ 		# Both copper ports are LAN; the upstream connection is PON.
+ 		ucidef_set_interface_lan "lan1 lan2"
+diff --git a/target/linux/airoha/image/an7581.mk b/target/linux/airoha/image/an7581.mk
+index bf5962abaa..dd9c98cb4f 100644
+--- a/target/linux/airoha/image/an7581.mk
++++ b/target/linux/airoha/image/an7581.mk
+@@ -197,3 +197,16 @@ define Device/quantum_q1000k-ubi
+   SOC := an7581
+ endef
+ TARGET_DEVICES += quantum_q1000k-ubi
++
++define Device/skyworth_sk-g7220-black
++  $(call Device/FitImageLzma)
++  DEVICE_VENDOR := Skyworth
++  DEVICE_MODEL := SK-G7220
++  DEVICE_VARIANT := Black
++  DEVICE_DTS := en7581-skyworth-sk-g7220
++  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-phy-airoha-en8811h \
++	kmod-usb3 airoha-en7581-npu-firmware kmod-mt7992-firmware wpad-basic-mbedtls
++  # Note: RAM boot only for now; the tclinux flash image comes later
++  IMAGES :=
++endef
++TARGET_DEVICES += skyworth_sk-g7220-black
