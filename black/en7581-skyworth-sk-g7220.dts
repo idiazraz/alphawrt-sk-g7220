@@ -98,6 +98,9 @@
 };
 
 &pinctrl {
+	/* Note: the OpenWrt an7581 kernel binds only this name; the newer
+	 * an7581.dtsi says "airoha,an7581-pinctrl" and nothing probes. */
+	compatible = "airoha,en7581-pinctrl";
 	gpio-ranges = <&pinctrl 0 13 50>;
 
 	mdio_pins: mdio-pins {
