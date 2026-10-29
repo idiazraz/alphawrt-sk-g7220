@@ -54,12 +54,6 @@ ITS = """/dts-v1/;
             entry = <{load:#x}>;
             hash@1 {{ algo = "sha1"; }};
         }};
-        pad@1 {{
-            description = "pad";
-            data = /incbin/("{pad}");
-            type = "data";
-            compression = "none";
-        }};
         filesystem@1 {{
             description = "rootfs";
             data = /incbin/("{rootfs}");
@@ -76,6 +70,7 @@ ITS = """/dts-v1/;
             description = "AlphaWRT";
             kernel = "kernel@1";
             fdt = "fdt@1";
+            filesystem = "filesystem@1";
         }};
     }};
 }};
@@ -100,30 +95,34 @@ def main():
     ap.add_argument("--mkimage", default="mkimage")
     a = ap.parse_args()
 
-    TARGET_ROOTFS_OFFSET = 0x700000  # 7 MiB boundary for mtdblock3 / mtdblock6
+    TARGET_ROOTFS_OFFSET = 0x400000  # 4 MiB boundary for mtdblock3 / mtdblock6
     TARGET_FIT_OFFSET = TARGET_ROOTFS_OFFSET - 0x2100
+
+    raw_k = open(a.kernel, "rb").read()
 
     with tempfile.TemporaryDirectory() as t:
         its = os.path.join(t, "image.its")
         fit = os.path.join(t, "image.fit")
-        pad = os.path.join(t, "pad.bin")
+        padded_k = os.path.join(t, "kernel.lzma")
 
         # Two-pass calibration to place filesystem@1 precisely at TARGET_FIT_OFFSET
-        pad_sz = 3000000
-        open(pad, "wb").write(b"\xff" * pad_sz)
-        open(its, "w").write(ITS.format(dtb=a.dtb, kernel=a.kernel, pad=pad, rootfs=a.rootfs, load=LOAD))
-        subprocess.run([a.mkimage, "-f", its, fit], check=True, stdout=subprocess.DEVNULL)
-        fitb = open(fit, "rb").read()
-        curr = fitb.find(b"hsqs")
-        diff = TARGET_FIT_OFFSET - curr
-        pad_sz += diff
-        open(pad, "wb").write(b"\xff" * pad_sz)
-        open(its, "w").write(ITS.format(dtb=a.dtb, kernel=a.kernel, pad=pad, rootfs=a.rootfs, load=LOAD))
-        subprocess.run([a.mkimage, "-f", its, fit], check=True, stdout=subprocess.DEVNULL)
-        fitb = open(fit, "rb").read()
-        final_off = fitb.find(b"hsqs")
-        if final_off != TARGET_FIT_OFFSET:
-            sys.exit(f"filesystem@1 at {final_off:#x}, expected {TARGET_FIT_OFFSET:#x}")
+        pad_sz = 1000
+        for _ in range(5):
+            open(padded_k, "wb").write(raw_k + b"\x00" * pad_sz)
+            open(its, "w").write(ITS.format(dtb=a.dtb, kernel=padded_k, rootfs=a.rootfs, load=LOAD))
+            subprocess.run([a.mkimage, "-f", its, fit], check=True, stdout=subprocess.DEVNULL)
+            fitb = open(fit, "rb").read()
+            curr = fitb.find(b"hsqs")
+            diff = TARGET_FIT_OFFSET - curr
+            if diff == 0:
+                break
+            pad_sz += diff
+        else:
+            final_off = fitb.find(b"hsqs")
+            if final_off != TARGET_FIT_OFFSET:
+                sys.exit(f"filesystem@1 at {final_off:#x}, expected {TARGET_FIT_OFFSET:#x}")
+
+        ksz = len(open(padded_k, "rb").read())
 
     # fdt@1 must sit in the first 0x800 bytes stock U-Boot reads
     i = fitb.find(b"fdt@1\0", struct.unpack(">I", fitb[8:12])[0])
@@ -142,7 +141,6 @@ def main():
     if fip_idx == -1:
         sys.exit("BL33 UUID not found in prefix")
 
-    ksz = len(open(a.kernel, "rb").read())
     rsz = len(open(a.rootfs, "rb").read())
     total = 0x100 + len(fitb)
     struct.pack_into("<Q", prefix, fip_idx + 24, total)

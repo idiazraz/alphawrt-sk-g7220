@@ -154,12 +154,12 @@
 
 		kernel@80000,0 {
 			label = "kernel";
-			reg = <0x00080000 0x00700000>;
+			reg = <0x00080000 0x00400000>;
 		};
 
-		rootfs@780000 {
+		rootfs@480000 {
 			label = "rootfs";
-			reg = <0x00780000 0x03500000>;
+			reg = <0x00480000 0x03800000>;
 		};
 
 		partition@3c80000 {
@@ -169,12 +169,12 @@
 
 		kernel_slave@3c80000,0 {
 			label = "kernel_slave";
-			reg = <0x03c80000 0x00700000>;
+			reg = <0x03c80000 0x00400000>;
 		};
 
-		rootfs_slave@4380000 {
+		rootfs_slave@4080000 {
 			label = "rootfs_slave";
-			reg = <0x04380000 0x03500000>;
+			reg = <0x04080000 0x03800000>;
 		};
 
 		partition@7880000 {
