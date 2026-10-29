@@ -5,7 +5,7 @@
 	images {
 		kernel-1 {
 			description = "ARM64 OpenWrt Linux-6.18.55";
-			data = /incbin/("kernel-1.lzma");
+			data = /incbin/("kernel-black.lzma");
 			type = "kernel"; arch = "arm64"; os = "linux"; compression = "lzma";
 			load = <0x80200000>; entry = <0x80200000>;
 			hash-1 { algo = "crc32"; };
