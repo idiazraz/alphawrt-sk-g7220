@@ -226,6 +226,15 @@
 	};
 };
 
+&eth {
+	status = "okay";
+};
+
+/* Internal 10G link to the switch: the DSA conduit for lan2-4 */
+&gdm1 {
+	status = "okay";
+};
+
 &switch {
 	status = "okay";
 
