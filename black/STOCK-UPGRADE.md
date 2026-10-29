@@ -37,11 +37,15 @@ A separate signature path (`blapi_system_secure_trx`,
 is enabled**, read as an efuse via `/dev/secure_upgrade` ioctl `SECURE_IOC_GET`
 (`secureupgrade.ko` → `tc3162/secure_boot_check_key`).
 
-**Secure boot looks off on this unit:** the stock boot log prints BL31
-"Disabling authentication of images dynamically" and the FIT is signed with a
-`sha1,rsa4096:dev` *development* key. So `image_check` should reduce to the
-CRC32 check. **Confirm on the board before trusting the GUI** (read the efuse /
-`blapi_cmd system get_secureboot_en`).
+**Secure boot is off on this unit (confirmed).** On every boot the board's
+BL2 (ARM Trusted Firmware v2.10.0) prints `NOTICE: SECURE_INVAILD` (sic) and
+`Secure key does not exist`, and U-Boot then prints `Verifying Hash Integrity
+... sha1+ OK` — a hash check, not a signature. A provisioned secure-boot efuse
+would make BL2 enforce signatures and reject the `rsa4096:dev` dev-key image;
+instead it boots. So `image_check` reduces to the CRC32/header check.
+(`secureupgrade.ko` also logs `eFuse value = 0x9` at init; the BL2 root-of-trust
+verdict above is the authority.) Evidence: `backup/uart-session.log`,
+`backup/black-uart.log`.
 
 ## The vendor header (reuse GN630V tooling)
 
@@ -77,7 +81,6 @@ stock.
 
 ## Open, before a flash
 
-- Confirm secure boot is off on the unit (efuse).
 - Exact model-string offset in the *upload file* (need a stock upgrade `.bin`,
   or derive from the two `dd` offsets once the file layout is fixed).
 - Confirm the CRC32 range/seed against `check_tclinux.py` (stored CRC in the
