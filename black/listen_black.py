@@ -43,6 +43,7 @@ def log_print(text):
 
 log_print(f"\n[listen_black] Connected to {PORT}. Streaming mode active...\n")
 
+tail = b""
 # Interactive loop: forwards any commands from CMD_FILE directly to serial
 while True:
     if os.path.exists(CMD_FILE):
@@ -64,5 +65,11 @@ while True:
             chunk = os.read(fd, 4096)
             if chunk:
                 log_print(chunk)
+                tail = (tail + chunk)[-300:]
+                # Automatically stop autoboot countdown on reset/power-cycle
+                if b"Hit any key to stop autoboot" in tail:
+                    os.write(fd, b"\r")
+                    log_print("\n[listen_black] Intercepted autoboot countdown -> ECNT>\n")
+                    tail = b""
         except (BlockingIOError, OSError):
             pass
