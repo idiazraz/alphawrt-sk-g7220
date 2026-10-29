@@ -88,3 +88,44 @@ stock.
 - FIT image node names: U-Boot/stock look up `kernel@1`/`fdt@1`/`filesystem@1`
   by name (OpenWrt emits `kernel-1`/`fdt-1`) — the GN630V install solved this
   same problem; reuse that.
+
+## Build (done) — the flashable image
+
+`black/mk_tclinux.py` + `black/mk_flash_image.sh` assemble a file byte-shaped
+like the genuine stock upgrade (`SK-G7220_V1.0.0.8`): the stock 0x2000 prefix
+verbatim, an `HDRs` header (model `THN21`, our version, CRC-32/JAMCRC of the
+FIT), then a FIT with `fdt@1` (first), `kernel@1` (lzma, load 0x80200000) and
+`filesystem@1` (our squashfs). `black/check_tclinux.py` verifies it offline.
+
+Needs `CONFIG_TARGET_ROOTFS_SQUASHFS=y` and `CONFIG_PACKAGE_fitblk=y`. Run:
+
+    black/mk_flash_image.sh          # -> backup/flash/sk-g7220-black-tclinux-factory.bin
+
+`black/check_tclinux.py` passes on the result: prefix identical to stock, HDRs
+magic/model match, CRC matches, FIT nodes present, `fdt@1` within the first
+0x800 bytes, sha1 hashes valid, kernel load 0x80200000, `filesystem@1` squashfs.
+
+## Not yet verified on hardware (do before trusting it)
+
+1. **Root mounts from flash.** Stock splits `tclinux` into kernel+rootfs with a
+   vendor "fit-fw" MTD parser and roots on the rootfs sub-partition; our build
+   must do the same via `fitblk` (included). If root doesn't mount, fix the
+   fitblk/cmdline/partition wiring and rebuild — this is the main open risk.
+2. **Stock writes the inactive bank.** `get_current_partition` should write the
+   spare bank and flip the boot flag, leaving stock as fallback. Confirm on the
+   first flash.
+
+## How to flash (supervised, serial recovery ready)
+
+Board must be booted from flash (stock) for either route. Flash writes the
+**inactive** bank, so stock stays in the other bank.
+
+- **SSH (robust):** `scp` the image to stock, then `sysupgrade -n -F <image>`.
+  `-F` skips stock's model/magic/CRC checks, so it works even if a header
+  detail is off.
+- **Stock web GUI:** upload the image on the firmware-upgrade page (the page
+  wants a name containing `tclinux`). Stock checks model `THN21`, the FIT magic
+  and the CRC — all matched by this image.
+
+If the new bank fails to boot, U-Boot should fall back to the stock bank; worst
+case, recover over serial (RAM-boot an initramfs).
