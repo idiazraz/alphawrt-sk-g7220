@@ -10,7 +10,7 @@
 #include "an7581-npu-mt7992.dtsi"
 
 / {
-	model = "Skyworth SK-G7220 (Black)";
+	model = "Skyworth SK-G7220 :  7581";
 	compatible = "skyworth,sk-g7220", "airoha,an7581", "airoha,en7581";
 
 	aliases {

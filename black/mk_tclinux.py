@@ -106,13 +106,23 @@ def main():
     if not 0 <= i < 0x800:
         sys.exit(f"fdt@1 not in first 0x800 bytes (at {i:#x})")
 
-    prefix = open(a.prefix, "rb").read()
+    prefix = bytearray(open(a.prefix, "rb").read())
     if len(prefix) != 0x2000:
         sys.exit(f"prefix must be 0x2000 bytes, got {len(prefix):#x}")
+
+    # Stock platform.sh check_secure_tclinux parses the FIP TOC in the first 0x2000 bytes.
+    # The BL33 entry (UUID d6d0eea7-fcea-d54b-9782-9934f234b6e4) size must match total (0x100 + len(fitb))
+    # so that the secure upgrade kernel driver hashes the exact payload without hitting EOF.
+    bl33_uuid = bytes.fromhex("d6d0eea7fcead54b97829934f234b6e4")
+    fip_idx = prefix.find(bl33_uuid)
+    if fip_idx == -1:
+        sys.exit("BL33 UUID not found in prefix")
 
     ksz = len(open(a.kernel, "rb").read())
     rsz = len(open(a.rootfs, "rb").read())
     total = 0x100 + len(fitb)
+    struct.pack_into("<Q", prefix, fip_idx + 24, total)
+
     crc = zlib.crc32(fitb) ^ 0xFFFFFFFF  # CRC-32/JAMCRC, over the FIT
 
     h = bytearray(0x100)
@@ -124,7 +134,10 @@ def main():
     h[0x5c:0x7c] = field(MODEL, 0x20)
     struct.pack_into("<I", h, 0x7c, 0)
 
-    out = prefix + bytes(h) + fitb
+    out = bytes(prefix) + bytes(h) + fitb
+    # Verify stock platform_check_image chip ID requirement at offset 8785
+    if out[8785:8789] != b"7581":
+        sys.exit(f"Offset 8785 must be '7581' for stock GUI verification, got {out[8785:8789]!r}")
     open(a.out, "wb").write(out)
     print(f"{a.out}: {len(out)} bytes  FIT={len(fitb)}  kernel={ksz}  rootfs={rsz}  crc={crc:#010x}")
 

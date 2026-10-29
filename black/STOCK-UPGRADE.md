@@ -11,31 +11,35 @@ LuCI, `/sbin/sysupgrade`, `/lib/upgrade/platform.sh`, `default_do_upgrade`.
 So an AlphaWRT image that passes stock's `platform_check_image` can be flashed
 through the stock GUI or `sysupgrade` over SSH, no U-Boot needed.
 
-## What stock checks (`lib/upgrade/platform.sh`)
+## What stock checks (`lib/upgrade/platform.sh` & `skgupgrade.js`)
 
-`platform_check_image` on the uploaded file:
-1. **Model string.** `uci -c /etc/skBoard/ get skboard.skboard.model` = `THN21`,
-   compared as hex ASCII against bytes read from the image at a fixed offset
-   (`dd bs=16 skip=458747`, path 1; `skip=688123`, path 2 — offsets into the
-   *upload file*, not the flash bank).
-2. **FIT magic** `d00dfeed` present.
-3. `/userfs/bin/blapi_cmd system image_check "$1"` — the real gate.
+Stock GUI (`/www/luci-static/resources/view/skTmCombo/skgupgrade.js`) executes:
+1. `ubus call system validate_firmware_image '{"path":"/tmp/firmware.bin"}'`
+   - Requires `result[1].valid == true` and `result[1].tests.fwtool_signature == true`.
+   - Calls `/usr/libexec/validate_firmware_image`, which runs `platform_check_image`.
+2. `ubus call file exec '{"command":"/sbin/sysupgrade","params":["--test","/tmp/firmware.bin"]}'`
+   - Requires exit code 0.
+3. `ubus call file exec '{"command":"/sbin/sysupgrade","params":["-u","/tmp/firmware.bin"]}'`
+   - Flashes the inactive bank (`tclinux_slave` when booted on bank 0).
 
-Path 2 also treats the first 0x80000 bytes as a `tcboot` (bootloader) and
-writes it to the `bootloader` partition; path 1 does not. We use **path 1**
-(no bootloader rewrite — safer).
-
-### `blapi_cmd system image_check` = header + CRC32, not a signature
-
-In `lib/libblapi_system.so`: `do_blapi_system_image_check` →
-`blapi_system_checkimageCrc` / `blapi_system_calculate_crc32`. Error strings:
-"Bad trx header", "crc32 check fail, checksum error", "image checksum is ok".
-It is a TRX/HDR-header + CRC32 check.
-
-A separate signature path (`blapi_system_secure_trx`,
-`do_blapi_system_check_secure_tclinux`, FIP header) runs **only if secure boot
-is enabled**, read as an efuse via `/dev/secure_upgrade` ioctl `SECURE_IOC_GET`
-(`secureupgrade.ko` → `tc3162/secure_boot_check_key`).
+Inside `platform_check_image`:
+1. **FIP TOC check (`/userfs/bin/blapi_cmd system check_secure_tclinux 0 "$1"`):**
+   Stock kernel exposes `/proc/tc3162/secure_boot_check_key` (even when empty).
+   Because the file exists, `platform_check_image` unconditionally calls
+   `check_secure_tclinux 0`. This opens `/dev/secure_upgrade` (`secureupgrade.ko`)
+   and verifies the FIP (Firmware Image Package) table at offset 0x0.
+   The entry for BL33 (UUID `d6d0eea7-fcea-d54b-9782-9934f234b6e4`) offset must be
+   `0x2000`, and its **size field must match the exact payload length** (`0x100 + len(FIT)`).
+   If size does not match, the kernel driver hits EOF when hashing and fails with -1.
+2. **Fixed Chip ID check at offset 8785:**
+   Stock runs `get_magic_long_offset "$NEW_FILE" "8785"` and checks `case "$GET_CHIPID" in 31383537 | 37353831` (ASCII `'7581'`).
+   8785 is 0x2100 + 337 (0x151) into the FIT. By setting the root node `model` in the DTB
+   to `"Skyworth SK-G7220 :  7581"`, the ASCII substring `'7581'` falls precisely at offset 8785.
+3. **Magic check at offset `$FIP_HEADER` (8192):**
+   Reads 4 bytes at offset 0x2000 and requires `HDRs` (`73524448 | 48445273`).
+4. **Bootloader write skip:**
+   Since offset 532480 (0x82000) does not contain `HDRs`, stock skips the `bootloader`
+   (tcboot) partition rewrite and proceeds with tclinux upgrade only.
 
 **Secure boot is off on this unit (confirmed).** On every boot the board's
 BL2 (ARM Trusted Firmware v2.10.0) prints `NOTICE: SECURE_INVAILD` (sic) and

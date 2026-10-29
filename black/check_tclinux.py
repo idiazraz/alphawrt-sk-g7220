@@ -27,6 +27,13 @@ fit = d[0x2100:0x2000 + total]
 ok((zlib.crc32(fit) ^ 0xFFFFFFFF) == crc, "CRC-32/JAMCRC of the FIT matches header")
 
 ok(fit[:4] == b"\xd0\x0d\xfe\xed", "FIT magic at 0x2100")
+ok(d[8785:8789] == b"7581", f"chip ID at fixed offset 8785 matches 7581 (got {d[8785:8789]!r})")
+
+bl33_uuid = bytes.fromhex("d6d0eea7fcead54b97829934f234b6e4")
+fip_idx = d[:0x2000].find(bl33_uuid)
+ok(fip_idx != -1, "FIP BL33 entry found")
+fip_sz = struct.unpack_from("<Q", d, fip_idx + 24)[0]
+ok(fip_sz == total, f"FIP TOC BL33 size {fip_sz:#x} matches total {total:#x}")
 ostruct, ostr = struct.unpack(">II", fit[8:16])
 name = lambda o: fit[ostr + o:fit.index(b"\0", ostr + o)].decode()
 p, path, props = ostruct, [], {}
