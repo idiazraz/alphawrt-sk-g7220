@@ -19,7 +19,7 @@ if [ -d "$HERE/patches" ]; then
 	cp "$HERE/patches/"*.patch "$TREE/target/linux/airoha/patches-6.18/"
 fi
 mkdir -p "$TREE/target/linux/airoha/base-files/lib/preinit"
-cp "$HERE/79_wipe_foreign_overlay" "$TREE/target/linux/airoha/base-files/lib/preinit/"
+cp "$HERE/79_alphawrt_ubi" "$TREE/target/linux/airoha/base-files/lib/preinit/"
 mkdir -p "$TREE/target/linux/airoha/an7581/base-files/etc/board.d"
 cp "$HERE/02_network" "$TREE/target/linux/airoha/an7581/base-files/etc/board.d/"
 

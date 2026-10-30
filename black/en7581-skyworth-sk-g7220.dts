@@ -100,7 +100,21 @@
 	};
 };
 
+/*
+ * an7581.dtsi and the 6.18 drivers disagree on these names. Nothing binds
+ * without the exact strings the drivers match, and an unbound pinctrl also
+ * takes out the switch, its MDIO bus (and so the EN8811H), LEDs, keys and PCIe.
+ */
+&cpufreq {
+	compatible = "airoha,an7581-cpufreq";
+};
+
+&npu {
+	compatible = "airoha,airoha_en7581-npu";
+};
+
 &en7581_pinctrl {
+	compatible = "airoha,en7581-pinctrl";
 	gpio-ranges = <&en7581_pinctrl 0 13 50>;
 
 	/*
@@ -191,9 +205,11 @@
 			reg = <0x04280000 0x03600000>;
 		};
 
+		/* Stock's JFFS2 overlay. Not "rootfs_data", or fstools would use it. */
 		partition@7880000 {
-			label = "rootfs_data";
+			label = "stock_data";
 			reg = <0x07880000 0x00800000>;
+			read-only;
 		};
 
 		partition@8080000 {
@@ -204,6 +220,12 @@
 		partition@a080000 {
 			label = "others";
 			reg = <0x0a080000 0x00200000>;
+		};
+
+		/* Blank on stock. Our overlay: UBI, volume rootfs_data. */
+		partition@a280000 {
+			label = "alphawrt_data";
+			reg = <0x0a280000 0x03a00000>;
 		};
 
 		art: partition@dc80000 {

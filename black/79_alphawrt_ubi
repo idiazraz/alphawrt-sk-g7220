@@ -1,0 +1,33 @@
+# Attach the overlay UBI before mount_root, so fstools finds the rootfs_data
+# volume. Only on flash boots: a RAM boot's root is not squashfs. If anything
+# here fails, fstools falls back to a tmpfs overlay and the board still boots.
+
+# No devtmpfs on this kernel: procd creates /dev nodes from hotplug events,
+# too late for a UBI device or volume used right after it appears.
+alphawrt_ubi_node() {
+	local maj min
+
+	[ -c "/dev/$1" ] && return 0
+	IFS=: read maj min < "/sys/class/ubi/$1/dev" || return 1
+	busybox mknod "/dev/$1" c "$maj" "$min"
+}
+
+alphawrt_preinit_ubi() {
+	local mtdnum
+
+	grep -q ' / squashfs ' /proc/mounts || return 0
+	mtdnum=$(find_mtd_index alphawrt_data)
+	[ -n "$mtdnum" ] || return 0
+
+	[ "$(dd if=/dev/mtd$mtdnum bs=4 count=1 2>/dev/null)" = "UBI#" ] ||
+		ubiformat "/dev/mtd$mtdnum" -y -q || return 0
+	ubiattach -m "$mtdnum" -d 0 >/dev/null 2>&1 || return 0
+	alphawrt_ubi_node ubi0 || return 0
+	# ponytail: rootfs_data is the only volume, so always ubi0_0
+	[ -e /sys/class/ubi/ubi0_0 ] ||
+		ubimkvol /dev/ubi0 -N rootfs_data -m >/dev/null 2>&1
+	alphawrt_ubi_node ubi0_0
+	return 0
+}
+
+boot_hook_add preinit_main alphawrt_preinit_ubi

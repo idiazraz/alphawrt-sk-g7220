@@ -5,7 +5,7 @@ The vendor U-Boot's TFTP stalls on large files, so each chunk is its own
 `tftpboot`. Needs: logged in at ECNT>, a TFTP server serving chunkNNN files
 (split -b 262144 -a 3 -d IMAGE.itb CHUNKDIR/chunk), nothing else on the port.
 
-Usage: python3 tools/tftp_chunk_boot.py CHUNKDIR [--port DEV] [--addr 0x81800000] [--start N] [--no-boot | --boot-only | --raw]
+Usage: python3 tools/tftp_chunk_boot.py CHUNKDIR [--port DEV] [--addr 0x83000000] [--start N] [--no-boot | --boot-only | --raw]
 --raw loads any file (e.g. a partition dump) and checks it with U-Boot `crc32`; it never boots or writes.
 Serve the chunks with tools/tftp_lockstep.py (short retransmit window).
 Writes nothing to flash. After bootm it keeps logging the console to backup/openwrt-boot.log.
@@ -16,7 +16,7 @@ args = [a for a in sys.argv[1:] if not a.startswith("--")]
 opt = lambda k, d: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else d
 CHUNKS = args[0]
 PORT = opt("--port", "/dev/cu.usbserial-1120")
-BASE = int(opt("--addr", "0x81800000"), 16)
+BASE = int(opt("--addr", "0x83000000"), 16)              # above the kernel: a 33 MiB initramfs Image at 0x80200000 overwrites a FIT at 0x81800000
 CHUNK = 0x40000                                           # the black board's TFTP stalls about once per MiB
 PROMPT = b"ECNT>"
 LOG = os.path.join(os.path.dirname(__file__), "..", "backup", "openwrt-boot.log")
