@@ -1,0 +1,84 @@
+--- a/drivers/net/ethernet/airoha/airoha_eth.h	2026-10-30 16:34:15.446593640 +0800
++++ b/drivers/net/ethernet/airoha/airoha_eth.h	2026-10-30 16:33:36.557008996 +0800
+@@ -198,6 +198,8 @@
+ #define AIROHA_MAX_MTU			9220
+ #define AIROHA_MAX_RX_SIZE		16128
+ #define AIROHA_MAX_PACKET_SIZE		2048
++#define AIROHA_RX_HEADROOM		(NET_SKB_PAD + NET_IP_ALIGN)
++#define AIROHA_RX_LEN(_n)		((_n) - AIROHA_RX_HEADROOM)
+ #define AIROHA_NUM_QOS_CHANNELS		4
+ #define AIROHA_NUM_QOS_QUEUES		8
+ #define AIROHA_NUM_NETDEV_TX_RINGS(_soc) (_soc->tx_ring + \
+--- a/drivers/net/ethernet/airoha/airoha_eth.c	2026-10-30 16:33:58.300075288 +0800
++++ b/drivers/net/ethernet/airoha/airoha_eth.c	2026-10-30 16:34:56.099925688 +0800
+@@ -2093,9 +2093,16 @@
+ 		q->queued++;
+ 		nframes++;
+ 
+-		e->buf = page_address(page) + offset;
+-		e->dma_addr = page_pool_get_dma_addr(page) + offset;
+-		e->dma_len = SKB_WITH_OVERHEAD(q->buf_size);
++		if (!airoha_is(qdma->eth, airoha_en7523, econet_en7580)) {
++			offset += AIROHA_RX_HEADROOM;
++			e->buf = page_address(page) + offset;
++			e->dma_addr = page_pool_get_dma_addr(page) + offset;
++			e->dma_len = SKB_WITH_OVERHEAD(AIROHA_RX_LEN(q->buf_size));
++		} else {
++			e->buf = page_address(page) + offset;
++			e->dma_addr = page_pool_get_dma_addr(page) + offset;
++			e->dma_len = SKB_WITH_OVERHEAD(q->buf_size);
++		}
+ 
+ 		WRITE_ONCE(desc->tcp_ts_reply, 0);
+ 		val = airoha_is(qdma->eth, airoha_en7523, econet_en7580) ?
+@@ -2360,9 +2367,19 @@
+ 		u32 desc_ctrl = le32_to_cpu(READ_ONCE(desc->ctrl));
+ 		u32 len = FIELD_GET(QDMA_DESC_LEN_MASK, desc_ctrl);
+ 
+-		skb = napi_build_skb(e->buf, q->buf_size);
+-		if (!skb)
+-			return NULL;
++		if (!airoha_is(q->qdma->eth, airoha_en7523, econet_en7580)) {
++			skb = napi_build_skb(e->buf - AIROHA_RX_HEADROOM, q->buf_size);
++			if (!skb)
++				return NULL;
++
++			skb_reserve(skb, AIROHA_RX_HEADROOM);
++		} else {
++			skb = napi_build_skb(e->buf, q->buf_size);
++			if (!skb)
++				return NULL;
++		}
++
++		skb_mark_for_recycle(skb);
+ 
+ 		__skb_put(skb, len);
+ 		if ((netdev->features & NETIF_F_RXCSUM) &&
+@@ -2372,7 +2389,6 @@
+ 			skb->ip_summed = CHECKSUM_NONE;
+ 	}
+ 
+-	skb_mark_for_recycle(skb);
+ 	skb->dev = netdev;
+ 	skb_record_rx_queue(skb, qid);
+ 	if (raw) {
+@@ -2651,8 +2667,9 @@
+ 		if (q->skb) {
+ 			dev_kfree_skb(q->skb);
+ 			q->skb = NULL;
++		} else {
++			page_pool_put_full_page(q->page_pool, page, true);
+ 		}
+-		page_pool_put_full_page(q->page_pool, page, true);
+ 	}
+ 	airoha_qdma_fill_rx_queue(q);
+ 
+@@ -2691,7 +2708,7 @@
+ 				     struct airoha_qdma *qdma, int ndesc)
+ {
+ 	struct page_pool_params pp_params = {
+-		.pool_size = 256,
++		.pool_size = ndesc,
+ 		.flags = PP_FLAG_DMA_MAP | PP_FLAG_DMA_SYNC_DEV,
+ 		.dma_dir = DMA_FROM_DEVICE,
+ 		.nid = NUMA_NO_NODE,
