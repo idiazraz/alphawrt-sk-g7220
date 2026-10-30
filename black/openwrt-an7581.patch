@@ -13,6 +13,18 @@ index b0d0fd8590..1ea8920225 100644
  	quantum,q1000k-ubi)
  		# Both copper ports are LAN; the upstream connection is PON.
  		ucidef_set_interface_lan "lan1 lan2"
+diff --git a/target/linux/airoha/an7581/config-6.18 b/target/linux/airoha/an7581/config-6.18
+index 98c0909ef5..e12980cdd6 100644
+--- a/target/linux/airoha/an7581/config-6.18
++++ b/target/linux/airoha/an7581/config-6.18
+@@ -189,6 +189,7 @@ CONFIG_IRQ_MSI_IOMMU=y
+ CONFIG_IRQ_MSI_LIB=y
+ CONFIG_IRQ_WORK=y
+ CONFIG_JBD2=y
++CONFIG_JFFS2_ZLIB=y
+ CONFIG_LIBFDT=y
+ CONFIG_LOCK_DEBUGGING_SUPPORT=y
+ CONFIG_LOCK_SPIN_ON_OWNER=y
 diff --git a/target/linux/airoha/image/an7581.mk b/target/linux/airoha/image/an7581.mk
 index bf5962abaa..e1e7ca34fd 100644
 --- a/target/linux/airoha/image/an7581.mk

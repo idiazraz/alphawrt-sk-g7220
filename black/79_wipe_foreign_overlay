@@ -1,0 +1,27 @@
+#!/bin/sh
+
+wipe_foreign_overlay() {
+	local mtd_part
+	local mtd_dev
+
+	mtd_part=$(grep -E '"rootfs_data"|"rootfs-data"' /proc/mtd | cut -d: -f1)
+	[ -n "$mtd_part" ] || return 0
+
+	mtd_dev="/dev/mtdblock${mtd_part#mtd}"
+	[ -b "$mtd_dev" ] || mtd_dev="/dev/mtdblock/${mtd_part#mtd}"
+	[ -b "$mtd_dev" ] || return 0
+
+	mkdir -p /tmp/chk_overlay
+	if mount -t jffs2 "$mtd_dev" /tmp/chk_overlay 2>/dev/null; then
+		if [ ! -e /tmp/chk_overlay/.fs_state ] && [ ! -e /tmp/chk_overlay/upper/.fs_state ]; then
+			echo "AlphaWRT: Non-OpenWrt / stock overlay on $mtd_part detected, wiping..."
+			umount /tmp/chk_overlay 2>/dev/null || umount -l /tmp/chk_overlay 2>/dev/null
+			mtd erase "$mtd_part"
+		else
+			umount /tmp/chk_overlay 2>/dev/null || umount -l /tmp/chk_overlay 2>/dev/null
+		fi
+	fi
+	rmdir /tmp/chk_overlay 2>/dev/null
+}
+
+boot_hook_add preinit_main wipe_foreign_overlay

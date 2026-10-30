@@ -14,6 +14,8 @@ if [ ! -d "$TREE/.git" ]; then
 	git -C "$TREE" apply "$HERE/openwrt-an7581.patch"
 fi
 cp "$HERE/en7581-skyworth-sk-g7220.dts" "$TREE/target/linux/airoha/dts/"
+mkdir -p "$TREE/target/linux/airoha/base-files/lib/preinit"
+cp "$HERE/79_wipe_foreign_overlay" "$TREE/target/linux/airoha/base-files/lib/preinit/"
 
 # AlphaWRT UI packages (copied; omci-agent is GN630V-only, so it's dropped here)
 mkdir -p "$TREE/package/alphawrt"
