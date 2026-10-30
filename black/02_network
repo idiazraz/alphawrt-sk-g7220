@@ -30,7 +30,7 @@ an7581_setup_interfaces()
 		;;
 	skyworth,sk-g7220)
 		# All copper ports are LAN; the upstream connection is PON.
-		ucidef_set_interface_lan "lan1 lan2 lan3 lan4"
+		ucidef_set_interface_lan "lan1 lan2 lan3 lan4 lan5"
 		;;
 	*)
 		echo "Unsupported hardware. Network interfaces not initialized"

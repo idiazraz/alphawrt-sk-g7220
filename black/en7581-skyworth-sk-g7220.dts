@@ -309,6 +309,16 @@
 	pinctrl-0 = <&mdio_pins>;
 };
 
+&gsw_port1 {
+	status = "okay";
+	label = "lan5";
+};
+
+&gsw_phy1 {
+	status = "okay";
+	interrupts = <1>;
+};
+
 &gsw_port2 {
 	status = "okay";
 	label = "lan2";

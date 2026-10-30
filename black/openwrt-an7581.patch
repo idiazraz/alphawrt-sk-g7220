@@ -76,7 +76,7 @@ index 9567b758cd..272f245ea3 100644
 +  DEVICE_MODEL := SK-G7220
 +  DEVICE_VARIANT := Black
 +  DEVICE_DTS := en7581-skyworth-sk-g7220
-+  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-pwm-airoha kmod-phy-airoha-en8811h \
++  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-pwm-airoha kmod-phy-airoha-en8811h airoha-en8811h-firmware \
 +	kmod-usb3 airoha-en7581-npu-firmware kmod-mt7992-firmware wpad-mbedtls
 +  IMAGES :=
 +endef

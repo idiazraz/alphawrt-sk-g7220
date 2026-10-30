@@ -1,5 +1,5 @@
---- a/drivers/net/ethernet/airoha/airoha_eth.h	2026-10-30 16:34:15.446593640 +0800
-+++ b/drivers/net/ethernet/airoha/airoha_eth.h	2026-10-30 16:33:36.557008996 +0800
+--- a/drivers/net/ethernet/airoha/airoha_eth.h	2026-10-30 18:58:50.275992820 +0800
++++ b/drivers/net/ethernet/airoha/airoha_eth.h	2026-10-30 18:58:50.278978524 +0800
 @@ -198,6 +198,8 @@
  #define AIROHA_MAX_MTU			9220
  #define AIROHA_MAX_RX_SIZE		16128
@@ -9,71 +9,151 @@
  #define AIROHA_NUM_QOS_CHANNELS		4
  #define AIROHA_NUM_QOS_QUEUES		8
  #define AIROHA_NUM_NETDEV_TX_RINGS(_soc) (_soc->tx_ring + \
---- a/drivers/net/ethernet/airoha/airoha_eth.c	2026-10-30 16:33:58.300075288 +0800
-+++ b/drivers/net/ethernet/airoha/airoha_eth.c	2026-10-30 16:34:56.099925688 +0800
-@@ -2093,9 +2093,16 @@
- 		q->queued++;
+--- a/drivers/net/ethernet/airoha/airoha_eth.c	2026-10-30 18:58:50.273144572 +0800
++++ b/drivers/net/ethernet/airoha/airoha_eth.c	2026-10-30 19:06:42.296606816 +0800
+@@ -1796,15 +1796,13 @@
+ 
+ 	for (i = 0; i < q->ndesc; i++) {
+ 		struct econet_q_rx_ent *e = &q->entry[i];
+-		struct page *page;
+ 
+ 		if (!e->dma_addr)
+ 			continue;
+ 
+-		page = virt_to_head_page(e->buf);
+ 		dma_sync_single_for_cpu(q->qdma->qdma->eth->dev, e->dma_addr, e->dma_len,
+ 					page_pool_get_dma_dir(q->page_pool));
+-		page_pool_put_full_page(q->page_pool, page, false);
++		page_pool_free_va(q->page_pool, e->buf, false);
+ 		e->dma_addr = 0;
+ 		e->buf = NULL;
+ 	}
+@@ -2094,8 +2092,14 @@
  		nframes++;
  
--		e->buf = page_address(page) + offset;
+ 		e->buf = page_address(page) + offset;
 -		e->dma_addr = page_pool_get_dma_addr(page) + offset;
 -		e->dma_len = SKB_WITH_OVERHEAD(q->buf_size);
 +		if (!airoha_is(qdma->eth, airoha_en7523, econet_en7580)) {
-+			offset += AIROHA_RX_HEADROOM;
-+			e->buf = page_address(page) + offset;
-+			e->dma_addr = page_pool_get_dma_addr(page) + offset;
++			e->dma_addr = page_pool_get_dma_addr(page) + offset +
++				      AIROHA_RX_HEADROOM;
 +			e->dma_len = SKB_WITH_OVERHEAD(AIROHA_RX_LEN(q->buf_size));
 +		} else {
-+			e->buf = page_address(page) + offset;
 +			e->dma_addr = page_pool_get_dma_addr(page) + offset;
 +			e->dma_len = SKB_WITH_OVERHEAD(q->buf_size);
 +		}
  
  		WRITE_ONCE(desc->tcp_ts_reply, 0);
  		val = airoha_is(qdma->eth, airoha_en7523, econet_en7580) ?
-@@ -2360,9 +2367,19 @@
- 		u32 desc_ctrl = le32_to_cpu(READ_ONCE(desc->ctrl));
- 		u32 len = FIELD_GET(QDMA_DESC_LEN_MASK, desc_ctrl);
+@@ -2194,6 +2198,8 @@
+ 	struct sk_buff *skb;
+ 	struct tcphdr *th;
+ 	struct page *page;
++	u32 rx_offset;
++	void *data;
+ 	bool ipv4, ipv6;
  
--		skb = napi_build_skb(e->buf, q->buf_size);
--		if (!skb)
--			return NULL;
-+		if (!airoha_is(q->qdma->eth, airoha_en7523, econet_en7580)) {
-+			skb = napi_build_skb(e->buf - AIROHA_RX_HEADROOM, q->buf_size);
-+			if (!skb)
-+				return NULL;
-+
+ 	switch (q->qdma->eth->soc->version) {
+@@ -2217,6 +2223,8 @@
+ 
+ 	l2_len = FIELD_GET(QDMA_ETH_RXMSG_L2_LEN_MASK, msg2);
+ 	len = FIELD_GET(QDMA_DESC_LEN_MASK, desc_ctrl);
++	rx_offset = airoha_is(q->qdma->eth, airoha_en7523, econet_en7580) ? 0 : AIROHA_RX_HEADROOM;
++	data = e->buf + rx_offset;
+ 
+ 	if (ipv4) {
+ 		struct iphdr *iph;
+@@ -2224,7 +2232,7 @@
+ 		if (len < l2_len + sizeof(*iph))
+ 			return NULL;
+ 
+-		iph = (struct iphdr *)(e->buf + l2_len);
++		iph = (struct iphdr *)(data + l2_len);
+ 		if (iph->protocol != IPPROTO_TCP)
+ 			return NULL;
+ 
+@@ -2245,7 +2253,7 @@
+ 		if (len < th_off)
+ 			return NULL;
+ 
+-		ip6h = (struct ipv6hdr *)(e->buf + l2_len);
++		ip6h = (struct ipv6hdr *)(data + l2_len);
+ 		if (ip6h->nexthdr != NEXTHDR_TCP)
+ 			return NULL;
+ 
+@@ -2255,7 +2263,7 @@
+ 	if (len < th_off + sizeof(*th))
+ 		return NULL;
+ 
+-	th = (struct tcphdr *)(e->buf + th_off);
++	th = (struct tcphdr *)(data + th_off);
+ 	if (th->doff < 5)
+ 		return NULL;
+ 
+@@ -2298,14 +2306,15 @@
+ 		return NULL;
+ 
+ 	__skb_put(skb, data_off);
+-	memcpy(skb->data, e->buf, data_off);
++	memcpy(skb->data, data, data_off);
+ 
+ 	page = virt_to_head_page(e->buf);
+ 	data_len = len - data_off;
+ 	shinfo = skb_shinfo(skb);
+ 	skb_add_rx_frag(skb, shinfo->nr_frags, page,
+-			e->buf + data_off - page_address(page), data_len,
++			data + data_off - page_address(page), data_len,
+ 			q->buf_size);
++	skb_mark_for_recycle(skb);
+ 
+ 	shinfo->gso_type = ipv4 ? SKB_GSO_TCPV4 : SKB_GSO_TCPV6;
+ 	agg_count = FIELD_GET(QDMA_ETH_RXMSG_AGG_COUNT_MASK, msg2);
+@@ -2364,6 +2373,9 @@
+ 		if (!skb)
+ 			return NULL;
+ 
++		if (!airoha_is(q->qdma->eth, airoha_en7523, econet_en7580))
 +			skb_reserve(skb, AIROHA_RX_HEADROOM);
-+		} else {
-+			skb = napi_build_skb(e->buf, q->buf_size);
-+			if (!skb)
-+				return NULL;
-+		}
 +
-+		skb_mark_for_recycle(skb);
- 
  		__skb_put(skb, len);
  		if ((netdev->features & NETIF_F_RXCSUM) &&
-@@ -2372,7 +2389,6 @@
- 			skb->ip_summed = CHECKSUM_NONE;
- 	}
+ 		    airoha_qdma_rx_checksum_ok(q->qdma->eth, desc))
+@@ -2470,7 +2482,9 @@
+ 			FIELD_GET(EN7523_QDMA_DESC_LEN_MASK, desc_ctrl) :
+ 			FIELD_GET(QDMA_DESC_LEN_MASK, desc_ctrl);
+ 		data_len = q->skb ? q->buf_size
+-				  : SKB_WITH_OVERHEAD(q->buf_size);
++				  : (airoha_is(eth, airoha_en7523, econet_en7580) ?
++				     SKB_WITH_OVERHEAD(q->buf_size) :
++				     SKB_WITH_OVERHEAD(AIROHA_RX_LEN(q->buf_size)));
+ 		if (!len || data_len < len)
+ 			goto free_frag;
  
--	skb_mark_for_recycle(skb);
- 	skb->dev = netdev;
- 	skb_record_rx_queue(skb, qid);
- 	if (raw) {
-@@ -2651,8 +2667,9 @@
- 		if (q->skb) {
+@@ -2521,12 +2535,13 @@
+ 		} else { /* scattered frame */
+ 			struct skb_shared_info *shinfo = skb_shinfo(q->skb);
+ 			int nr_frags = shinfo->nr_frags;
++			u32 rx_offset = airoha_is(eth, airoha_en7523, econet_en7580) ? 0 : AIROHA_RX_HEADROOM;
+ 
+ 			if (nr_frags >= ARRAY_SIZE(shinfo->frags))
+ 				goto free_frag;
+ 
+ 			skb_add_rx_frag(q->skb, nr_frags, page,
+-					e->buf - page_address(page), len,
++					e->buf + rx_offset - page_address(page), len,
+ 					q->buf_size);
+ 		}
+ 
+@@ -2652,7 +2667,7 @@
  			dev_kfree_skb(q->skb);
  			q->skb = NULL;
-+		} else {
-+			page_pool_put_full_page(q->page_pool, page, true);
  		}
 -		page_pool_put_full_page(q->page_pool, page, true);
++		page_pool_free_va(q->page_pool, e->buf, true);
  	}
  	airoha_qdma_fill_rx_queue(q);
  
-@@ -2691,7 +2708,7 @@
+@@ -2691,7 +2706,7 @@
  				     struct airoha_qdma *qdma, int ndesc)
  {
  	struct page_pool_params pp_params = {
@@ -82,3 +162,16 @@
  		.flags = PP_FLAG_DMA_MAP | PP_FLAG_DMA_SYNC_DEV,
  		.dma_dir = DMA_FROM_DEVICE,
  		.nid = NUMA_NO_NODE,
+@@ -2767,11 +2782,10 @@
+ 	while (q->queued) {
+ 		struct airoha_queue_entry *e = &q->entry[q->tail];
+ 		struct airoha_qdma_desc *desc = &q->desc[q->tail];
+-		struct page *page = virt_to_head_page(e->buf);
+ 
+ 		dma_sync_single_for_cpu(eth->dev, e->dma_addr, e->dma_len,
+ 					page_pool_get_dma_dir(q->page_pool));
+-		page_pool_put_full_page(q->page_pool, page, false);
++		page_pool_free_va(q->page_pool, e->buf, false);
+ 		/* Reset DMA descriptor */
+ 		WRITE_ONCE(desc->tcp_ts_reply, 0);
+ 		WRITE_ONCE(desc->ctrl, 0);
