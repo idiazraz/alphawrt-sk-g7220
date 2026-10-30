@@ -28,60 +28,48 @@ index b0d0fd8590..1ea8920225 100644
  		# Both copper ports are LAN; the upstream connection is PON.
  		ucidef_set_interface_lan "lan1 lan2"
 diff --git a/target/linux/airoha/an7581/config-6.18 b/target/linux/airoha/an7581/config-6.18
-index 98c0909ef5..e12980cdd6 100644
+index 527ab695cd..bae4ecfba3 100644
 --- a/target/linux/airoha/an7581/config-6.18
 +++ b/target/linux/airoha/an7581/config-6.18
-@@ -189,6 +189,7 @@ CONFIG_IRQ_MSI_IOMMU=y
- CONFIG_IRQ_MSI_LIB=y
- CONFIG_IRQ_WORK=y
- CONFIG_JBD2=y
+@@ -435,3 +435,5 @@ CONFIG_ZONE_DMA32=y
+ CONFIG_ZSTD_COMMON=y
+ CONFIG_ZSTD_COMPRESS=y
+ CONFIG_ZSTD_DECOMPRESS=y
 +CONFIG_JFFS2_ZLIB=y
- CONFIG_LIBFDT=y
- CONFIG_LOCK_DEBUGGING_SUPPORT=y
- CONFIG_LOCK_SPIN_ON_OWNER=y
++CONFIG_AIROHA_XPON_V1=y
 diff --git a/target/linux/airoha/dts/an7581.dtsi b/target/linux/airoha/dts/an7581.dtsi
-index af5a5f4dae..027b283636 100644
+index 4e4653e705..fce7e05ae9 100644
 --- a/target/linux/airoha/dts/an7581.dtsi
 +++ b/target/linux/airoha/dts/an7581.dtsi
-@@ -419,6 +419,7 @@
- 			reg = <0x0 0x1fbe2200 0x0 0x9000>;
+@@ -638,7 +638,7 @@
+ 			compatible = "syscon", "simple-mfd";
+ 			reg = <0x0 0x1fbf0200 0x0 0xc0>;
  
- 			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
-+			#sound-dai-cells = <0>;
- 			status = "disabled";
- 		};
+-			pinctrl: pinctrl {
++			en7581_pinctrl: pinctrl: pinctrl {
+ 				compatible = "airoha,an7581-pinctrl";
  
-diff --git a/target/linux/airoha/dts/an7583.dtsi b/target/linux/airoha/dts/an7583.dtsi
-index fdd44fb610..a909300e60 100644
---- a/target/linux/airoha/dts/an7583.dtsi
-+++ b/target/linux/airoha/dts/an7583.dtsi
-@@ -380,6 +380,8 @@
- 			mdio_0: mdio-bus@c8 {
- 				compatible = "airoha,an7583-mdio";
- 				reg = <0xc8>;
-+				#address-cells = <1>;
-+				#size-cells = <0>;
+ 				interrupt-parent = <&gic>;
+@@ -957,8 +957,9 @@
+ 			compatible = "airoha,en7581-eth";
+ 			reg = <0 0x1fb50000 0 0x2600>,
+ 			      <0 0x1fb54000 0 0x2000>,
+-			      <0 0x1fb56000 0 0x2000>;
+-			reg-names = "fe", "qdma0", "qdma1";
++			      <0 0x1fb56000 0 0x2000>,
++			      <0 0x1fbf9000 0 0x1000>;
++			reg-names = "fe", "qdma0", "qdma1", "gdmp";
  
- 				clocks = <&scuclk AN7583_CLK_MDIO0>;
- 				resets = <&scuclk AN7583_MDIO0>;
-@@ -388,6 +390,8 @@
- 			mdio_1: mdio-bus@cc {
- 				compatible = "airoha,an7583-mdio";
- 				reg = <0xcc>;
-+				#address-cells = <1>;
-+				#size-cells = <0>;
- 
- 				clocks = <&scuclk AN7583_CLK_MDIO1>;
- 				resets = <&scuclk AN7583_MDIO1>;
+ 			resets = <&scuclk EN7581_FE_RST>,
+ 				 <&scuclk EN7581_FE_PDMA_RST>,
 diff --git a/target/linux/airoha/image/an7581.mk b/target/linux/airoha/image/an7581.mk
-index bf5962abaa..a97cc0e717 100644
+index 9567b758cd..272f245ea3 100644
 --- a/target/linux/airoha/image/an7581.mk
 +++ b/target/linux/airoha/image/an7581.mk
-@@ -197,3 +197,16 @@ define Device/quantum_q1000k-ubi
-   SOC := an7581
+@@ -204,6 +204,18 @@ define Device/skyworth_sk-g7220
  endef
- TARGET_DEVICES += quantum_q1000k-ubi
-+
+ TARGET_DEVICES += skyworth_sk-g7220
+ 
 +define Device/skyworth_sk-g7220-black
 +  $(call Device/FitImageLzma)
 +  DEVICE_VENDOR := Skyworth
@@ -90,7 +78,44 @@ index bf5962abaa..a97cc0e717 100644
 +  DEVICE_DTS := en7581-skyworth-sk-g7220
 +  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-pwm-airoha kmod-phy-airoha-en8811h \
 +	kmod-usb3 airoha-en7581-npu-firmware kmod-mt7992-firmware wpad-mbedtls
-+  # Note: RAM boot only for now; the tclinux flash image comes later
 +  IMAGES :=
 +endef
 +TARGET_DEVICES += skyworth_sk-g7220-black
++
+ define Device/quantum_q1000k-ubi
+   DEVICE_VENDOR := Quantum Fiber
+   DEVICE_MODEL := Q1000K
+diff --git a/target/linux/airoha/patches-6.18/930-297-airoha_en7523_all-net-airoha-consolidate-Ethernet-driver-implementatio.patch b/target/linux/airoha/patches-6.18/930-297-airoha_en7523_all-net-airoha-consolidate-Ethernet-driver-implementatio.patch
+index 86353b4b09..a705999b03 100644
+--- a/target/linux/airoha/patches-6.18/930-297-airoha_en7523_all-net-airoha-consolidate-Ethernet-driver-implementatio.patch
++++ b/target/linux/airoha/patches-6.18/930-297-airoha_en7523_all-net-airoha-consolidate-Ethernet-driver-implementatio.patch
+@@ -6441,7 +6441,7 @@ index f831320f8..3d5e3a3dd 100644
+ +	dev_info_ratelimited(&netdev->dev,
+ +			     "GPON OAM RX descriptor: index=%u dma=%#010x ctrl=%#010x done=%u len=%u msg=%#010x/%#010x/%#010x/%#010x oam=%u channel=%u gem=%u no-mic=%u\n",
+ +			     index,
+-+			     ring_base + index * sizeof(struct airoha_qdma_desc),
+++			     (u32)(ring_base + index * sizeof(struct airoha_qdma_desc)),
+ +			     ctrl, !!(ctrl & QDMA_DESC_DONE_MASK), desc_len,
+ +			     msg0, msg1, msg2, msg3,
+ +			     !!(msg0 & EN7523_QDMA_ETH_RXMSG_OAM_MASK),
+diff --git a/target/linux/airoha/patches-6.18/930-370-airoha_en7523_all-en7580-scuclk.patch b/target/linux/airoha/patches-6.18/930-370-airoha_en7523_all-en7580-scuclk.patch
+index 821b6a2c7e..da586dc01a 100644
+--- a/target/linux/airoha/patches-6.18/930-370-airoha_en7523_all-en7580-scuclk.patch
++++ b/target/linux/airoha/patches-6.18/930-370-airoha_en7523_all-en7580-scuclk.patch
+@@ -379,7 +379,7 @@ index 1d737ae52..39f10265b 100644
+  			base = devm_platform_ioremap_resource(pdev, 1);
+  		if (IS_ERR(base))
+  			return PTR_ERR(base);
+-@@ -1036,8 +1038,14 @@ static const struct airoha_spi_soc_data en7523_spi_data = {
++@@ -1036,8 +1038,15 @@ static const struct airoha_spi_soc_data en7523_spi_data = {
+  	.has_boot_trp = true,
+  };
+  
+@@ -391,6 +391,7 @@ index 1d737ae52..39f10265b 100644
+  static const struct of_device_id airoha_spi_ids[] = {
+  	{ .compatible = "econet,en751221-spi", .data = &en751221_spi_data },
+ +	{ .compatible = "econet,en7580-spi", .data = &en7580_spi_data },
+++	{ .compatible = "airoha,en7581-snand", .data = &en7580_spi_data },
+  	{ .compatible = "airoha,en7523-spi", .data = &en7523_spi_data },
+  	{ /* sentinel */ }
+  };
