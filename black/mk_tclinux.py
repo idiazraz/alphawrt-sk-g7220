@@ -95,7 +95,7 @@ def main():
     ap.add_argument("--mkimage", default="mkimage")
     a = ap.parse_args()
 
-    TARGET_ROOTFS_OFFSET = 0x400000  # 4 MiB boundary for mtdblock3 / mtdblock6
+    TARGET_ROOTFS_OFFSET = 0x600000  # 6 MiB boundary for mtdblock3 / mtdblock6
     TARGET_FIT_OFFSET = TARGET_ROOTFS_OFFSET - 0x2100
 
     raw_k = open(a.kernel, "rb").read()
