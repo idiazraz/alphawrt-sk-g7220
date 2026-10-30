@@ -1,3 +1,17 @@
+diff --git a/target/linux/airoha/an7581/base-files/etc/board.d/01_leds b/target/linux/airoha/an7581/base-files/etc/board.d/01_leds
+index 5cec5df424..0e9c443fd1 100644
+--- a/target/linux/airoha/an7581/base-files/etc/board.d/01_leds
++++ b/target/linux/airoha/an7581/base-files/etc/board.d/01_leds
+@@ -33,6 +33,9 @@ quantum,q1000k-ubi)
+ 	ucidef_set_led_netdev "lan1-yellow" "lan1" "yellow:lan" "lan1" "link_10 link_100"
+ 	ucidef_set_led_netdev "lan1-green" "lan1" "green:lan" "lan1" "link_1000 tx rx"
+ 	;;
++skyworth,sk-g7220)
++	ucidef_set_led_usbport "usb" "USB" "green:usb" "usb1-port1"
++	;;
+ esac
+ 
+ board_config_flush
 diff --git a/target/linux/airoha/an7581/base-files/etc/board.d/02_network b/target/linux/airoha/an7581/base-files/etc/board.d/02_network
 index b0d0fd8590..1ea8920225 100644
 --- a/target/linux/airoha/an7581/base-files/etc/board.d/02_network
@@ -25,8 +39,42 @@ index 98c0909ef5..e12980cdd6 100644
  CONFIG_LIBFDT=y
  CONFIG_LOCK_DEBUGGING_SUPPORT=y
  CONFIG_LOCK_SPIN_ON_OWNER=y
+diff --git a/target/linux/airoha/dts/an7581.dtsi b/target/linux/airoha/dts/an7581.dtsi
+index af5a5f4dae..027b283636 100644
+--- a/target/linux/airoha/dts/an7581.dtsi
++++ b/target/linux/airoha/dts/an7581.dtsi
+@@ -419,6 +419,7 @@
+ 			reg = <0x0 0x1fbe2200 0x0 0x9000>;
+ 
+ 			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
++			#sound-dai-cells = <0>;
+ 			status = "disabled";
+ 		};
+ 
+diff --git a/target/linux/airoha/dts/an7583.dtsi b/target/linux/airoha/dts/an7583.dtsi
+index fdd44fb610..a909300e60 100644
+--- a/target/linux/airoha/dts/an7583.dtsi
++++ b/target/linux/airoha/dts/an7583.dtsi
+@@ -380,6 +380,8 @@
+ 			mdio_0: mdio-bus@c8 {
+ 				compatible = "airoha,an7583-mdio";
+ 				reg = <0xc8>;
++				#address-cells = <1>;
++				#size-cells = <0>;
+ 
+ 				clocks = <&scuclk AN7583_CLK_MDIO0>;
+ 				resets = <&scuclk AN7583_MDIO0>;
+@@ -388,6 +390,8 @@
+ 			mdio_1: mdio-bus@cc {
+ 				compatible = "airoha,an7583-mdio";
+ 				reg = <0xcc>;
++				#address-cells = <1>;
++				#size-cells = <0>;
+ 
+ 				clocks = <&scuclk AN7583_CLK_MDIO1>;
+ 				resets = <&scuclk AN7583_MDIO1>;
 diff --git a/target/linux/airoha/image/an7581.mk b/target/linux/airoha/image/an7581.mk
-index bf5962abaa..e1e7ca34fd 100644
+index bf5962abaa..a97cc0e717 100644
 --- a/target/linux/airoha/image/an7581.mk
 +++ b/target/linux/airoha/image/an7581.mk
 @@ -197,3 +197,16 @@ define Device/quantum_q1000k-ubi
@@ -40,7 +88,7 @@ index bf5962abaa..e1e7ca34fd 100644
 +  DEVICE_MODEL := SK-G7220
 +  DEVICE_VARIANT := Black
 +  DEVICE_DTS := en7581-skyworth-sk-g7220
-+  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-phy-airoha-en8811h \
++  DEVICE_PACKAGES := kmod-gpio-button-hotplug kmod-leds-gpio kmod-pwm-airoha kmod-phy-airoha-en8811h \
 +	kmod-usb3 airoha-en7581-npu-firmware kmod-mt7992-firmware wpad-mbedtls
 +  # Note: RAM boot only for now; the tclinux flash image comes later
 +  IMAGES :=

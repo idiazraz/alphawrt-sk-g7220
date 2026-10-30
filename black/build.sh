@@ -16,15 +16,15 @@ fi
 cp "$HERE/en7581-skyworth-sk-g7220.dts" "$TREE/target/linux/airoha/dts/"
 mkdir -p "$TREE/target/linux/airoha/base-files/lib/preinit"
 cp "$HERE/79_wipe_foreign_overlay" "$TREE/target/linux/airoha/base-files/lib/preinit/"
+mkdir -p "$TREE/target/linux/airoha/an7581/base-files/etc/board.d"
+cp "$HERE/02_network" "$TREE/target/linux/airoha/an7581/base-files/etc/board.d/"
 
-# AlphaWRT UI packages (copied; omci-agent is GN630V-only, so it's dropped here)
+# AlphaWRT UI packages
 mkdir -p "$TREE/package/alphawrt"
 for p in alphawrt-ui luci-app-alphawrt luci-theme-alphawrt; do
 	rm -rf "$TREE/package/alphawrt/$p"
 	cp -R "$ALPHAWRT_PKGS/$p" "$TREE/package/alphawrt/"
 done
-sed -i.bak 's/ +omci-agent//' "$TREE/package/alphawrt/luci-app-alphawrt/Makefile"
-rm "$TREE/package/alphawrt/luci-app-alphawrt/Makefile.bak"
 
 cd "$TREE"
 grep -E '^src-git (packages|luci) ' feeds.conf.default > feeds.conf

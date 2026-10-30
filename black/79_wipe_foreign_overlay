@@ -20,8 +20,12 @@ wipe_foreign_overlay() {
 		else
 			umount /tmp/chk_overlay 2>/dev/null || umount -l /tmp/chk_overlay 2>/dev/null
 		fi
+	else
+		echo "AlphaWRT: Damaged or unmountable overlay on $mtd_part detected, erasing..."
+		mtd erase "$mtd_part"
 	fi
 	rmdir /tmp/chk_overlay 2>/dev/null
 }
 
 boot_hook_add preinit_main wipe_foreign_overlay
+
