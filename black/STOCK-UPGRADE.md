@@ -1,8 +1,8 @@
 # SK-G7220 Black: installing from stock (web GUI / SSH), not U-Boot
 
 Goal: flash AlphaWRT without the serial console, using stock's own upgrade
-path. This is feasible. The findings below come from the stock dump
-(`backup/dump-20261028-1959`, `backup/black-dump`), not yet from a live test.
+path. Verified on hardware; see below. The findings come from the stock dump
+(`backup/dump-20261028-1959`, `backup/black-dump`).
 
 ## Stock is OpenWrt
 
@@ -109,15 +109,18 @@ Needs `CONFIG_TARGET_ROOTFS_SQUASHFS=y` and `CONFIG_PACKAGE_fitblk=y`. Run:
 magic/model match, CRC matches, FIT nodes present, `fdt@1` within the first
 0x800 bytes, sha1 hashes valid, kernel load 0x80200000, `filesystem@1` squashfs.
 
-## Not yet verified on hardware (do before trusting it)
+## Verified on hardware (2026-11-01)
 
-1. **Root mounts from flash.** Stock splits `tclinux` into kernel+rootfs with a
-   vendor "fit-fw" MTD parser and roots on the rootfs sub-partition; our build
-   must do the same via `fitblk` (included). If root doesn't mount, fix the
-   fitblk/cmdline/partition wiring and rebuild — this is the main open risk.
-2. **Stock writes the inactive bank.** `get_current_partition` should write the
-   spare bank and flip the boot flag, leaving stock as fallback. Confirm on the
-   first flash.
+The stock web GUI installed the clean build from Bank 0: it wrote `tclinux_slave`,
+set the boot flag to 1 and rebooted. U-Boot booted the second image, root mounted
+and `mount_root` switched to the UBI overlay, with the existing settings kept.
+This was one run on one board, with a stock overlay restored from backup.
+
+Stock's LAN is 192.168.0.1. If that's also your home router's address, connect
+only to the board, or the browser reaches the router instead.
+
+A damaged `rootfs_data` leaves stock with no LAN, web page or login. Our early
+overlay tests caused that once; `backup/black-dump/mtd7.bin` restored it.
 
 ## How to flash (supervised, serial recovery ready)
 

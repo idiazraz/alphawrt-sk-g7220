@@ -1,0 +1,30 @@
+From: idiazraz <100824525+idiazraz@users.noreply.github.com>
+Subject: [PATCH] net: airoha: no TX offloads on the xPON port
+
+The xPON TX offload strip only matches nbq 2 with a non-"internal"
+phy-mode, so the EN7523 PON MAC (GDM2, nbq 0) kept scatter-gather and
+TSO. The first multi-descriptor frame queued to a GPON T-CONT never
+completes, BQL then holds the queue stopped and the upstream is dead.
+Strip the same features on every xpon-managed port.
+---
+--- a/drivers/net/ethernet/airoha/airoha_eth.c
++++ b/drivers/net/ethernet/airoha/airoha_eth.c
+@@ -9591,6 +9591,18 @@
+ 		netdev->features &= ~AIROHA_XPON_TX_OFFLOAD_FEATURES;
+ 		netdev->vlan_features &= ~AIROHA_XPON_TX_OFFLOAD_FEATURES;
+ 	}
++
++	/*
++	 * The check above never matches the EN7523 PON MAC (GDM2 has nbq 0).
++	 * A multi-descriptor frame queued towards a GPON T-CONT is never
++	 * completed and stalls the upstream for good, so segment and
++	 * checksum in software there too.
++	 */
++	if (of_property_read_bool(np, "airoha,xpon-managed")) {
++		netdev->hw_features &= ~AIROHA_XPON_TX_OFFLOAD_FEATURES;
++		netdev->features &= ~AIROHA_XPON_TX_OFFLOAD_FEATURES;
++		netdev->vlan_features &= ~AIROHA_XPON_TX_OFFLOAD_FEATURES;
++	}
+ 	port->devs[index] = dev;
+ 
+ 	return airoha_setup_phylink(netdev);

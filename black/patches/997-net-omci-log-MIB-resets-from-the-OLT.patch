@@ -1,0 +1,18 @@
+From: idiazraz <100824525+idiazraz@users.noreply.github.com>
+Subject: [PATCH] net: omci: log MIB resets from the OLT
+
+An OLT sends a MIB reset when it (re)provisions the ONU: after each
+registration, and when it decides to start the configuration over. Log
+it, so the line monitor can tell the user when the ISP re-provisioned
+the box.
+---
+--- a/net/xpon/omci/agent.c
++++ b/net/xpon/omci/agent.c
+@@ -4233,6 +4233,7 @@
+ 		*content_len = 32;
+ 		break;
+ 	case OMCI_MSG_TYPE_MIB_RESET:
++		dev_info(odev->parent, "OMCI MIB reset from the OLT\n");
+ 		if (omci_agent_mib_reset_locked(odev, false, profile_changed))
+ 			content[0] = OMCI_RESULT_PROCESSING_ERROR;
+ 		else

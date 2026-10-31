@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * WAN test, RAM boot only. The WAN EN8811H (0x0e) sits on the PON SerDes,
+ * which is shared with the native xPON PHY, so xPON is off here.
+ */
+#include "en7581-skyworth-sk-g7220.dts"
+
+&mdio {
+	en8811_wan: ethernet-phy@e {
+		compatible = "ethernet-phy-id03a2.a411";
+		reg = <0xe>;
+	};
+};
+
+&xpon {
+	status = "disabled";
+};
+
+&xpon_phy {
+	status = "disabled";
+};
+
+&pon_pcs {
+	status = "okay";
+};
+
+&gdm2 {
+	pcs-handle = <&pon_pcs>;
+	phy-handle = <&en8811_wan>;
+	phy-mode = "2500base-x";
+
+	nvmem-cell-names = "mac-address";
+	nvmem-cells = <&base_mac (1)>;
+
+	openwrt,netdev-name = "wan";
+};

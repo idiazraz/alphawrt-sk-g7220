@@ -1,17 +1,20 @@
 #!/bin/sh
-# Build the SK-G7220 Black initramfs (RAM boot) image with LuCI and the AlphaWRT UI.
-# Usage: black/build.sh [tree]   (default tree: /path/to/openwrt-sk-g7220)
+# Build the SK-G7220 Black images with LuCI and the AlphaWRT UI: initramfs (RAM boot)
+# and the stock-format flash image.
+# Usage: black/build.sh [tree] [flash-image]   (default tree: openwrt at the repo root)
 # Needs the GNU tools from AlphaWRT's env.sh on PATH on macOS.
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 ALPHAWRT_PKGS=${ALPHAWRT_PKGS:-$HERE/../../alphawrt/package}
-TREE=${1:-/path/to/openwrt-sk-g7220}
-REV=795f369b18   # snapshot r37896, the kernel that first booted on black
+TREE=${1:-$HERE/../openwrt}
+# Sirherobrine23's openwrt branch "airoha" (kernel 6.18 xPON drivers); the Black's tree is this plus openwrt-tree.patch
+FORK=https://github.com/Sirherobrine23/openwrt.git
+REV=f9bc9c77798104939f0de9c9208276fae97bd153   # his "airoha: sync config and kernel configs"; 4efad26d54 was force-pushed away
 
 if [ ! -d "$TREE/.git" ]; then
-	git clone --filter=blob:none https://github.com/openwrt/openwrt.git "$TREE"
-	git -C "$TREE" checkout -b sk-g7220 "$REV"
-	git -C "$TREE" apply "$HERE/openwrt-an7581.patch"
+	git clone --filter=blob:none "$FORK" "$TREE"
+	git -C "$TREE" checkout -b alphawrt-black "$REV"
+	git -C "$TREE" apply "$HERE/openwrt-tree.patch"
 fi
 cp "$HERE/en7581-skyworth-sk-g7220.dts" "$TREE/target/linux/airoha/dts/"
 mkdir -p "$TREE/target/linux/airoha/patches-6.18"
@@ -31,7 +34,7 @@ for p in alphawrt-ui luci-app-alphawrt luci-theme-alphawrt; do
 done
 
 cd "$TREE"
-grep -E '^src-git (packages|luci) ' feeds.conf.default > feeds.conf
+cp "$HERE/feeds.conf" feeds.conf   # pinned: the versions the working image was built from
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 cp "$HERE/config.seed" .config
@@ -47,3 +50,4 @@ fi
 make defconfig
 make -j"$(getconf _NPROCESSORS_ONLN)"
 ls bin/targets/airoha/an7581/*sk-g7220*initramfs*
+"$HERE/mk_flash_image.sh" "$TREE" ${2:+"$2"}

@@ -1,0 +1,131 @@
+From: idiazraz <100824525+idiazraz@users.noreply.github.com>
+Subject: [PATCH] net: xpon: omci: fix Nokia/ALCL audits and pre-seeded data MEs
+
+Port of airoha/kernel dc8e1469bb ("net: xpon: omci: fix Nokia/ALCL
+audits and pre-seeded data MEs", AK Sharma <maskachoska@yahoo.com>,
+sirherobrine23.com.br) onto AlphaWRT's 997-999:
+
+- Space-pad the configured EquipmentIdentifier to 20 bytes and keep
+  leading spaces: the Nokia/ALCL OLT audits it byte for byte.
+- On the Nokia/ALCL profile, report image 1 as committed/active/valid
+  and image 0 as 0/0/0, like the stock ONU. Other profiles keep image 0
+  as the running image (upstream changes it for every OLT).
+- Merge an OLT Create into a pre-seeded ME instead of answering
+  INSTANCE_EXISTS, which aborts the OLT's provisioning sequence. The
+  parsed VLAN filter and extended VLAN state are merged too.
+- Treat unsupported classes as faked in permissive mode.
+
+Based-on-patch-by: AK Sharma <maskachoska@yahoo.com>
+Signed-off-by: idiazraz <100824525+idiazraz@users.noreply.github.com>
+---
+--- a/net/xpon/omci/agent.c
++++ b/net/xpon/omci/agent.c
+@@ -941,7 +941,7 @@
+ static bool
+ omci_agent_fakes_unsupported(const struct omci_agent *agent)
+ {
+-	return agent->fake_omci ||
++	return agent->fake_omci || agent->permissive ||
+ 	       omci_agent_profile_has_quirk(agent,
+ 					    OMCI_OLT_QUIRK_FAKE_UNSUPPORTED_SUCCESS);
+ }
+@@ -1717,6 +1717,7 @@
+ 	struct omci_ani_topology topology;
+ 	u8 data[OMCI_MAX_ATTR_DATA] = {};
+ 	unsigned int i, queue;
++	bool alcl;
+ 	int ret;
+ 
+ 	ret = omci_agent_get_ani_topology(odev, &topology);
+@@ -1728,13 +1729,22 @@
+ 	if (ret)
+ 		return ret;
+ 
++	/* The Nokia/ALCL OLT audits the software images and stops
++	 * provisioning data GEMs unless they match the stock ONU: image 0
++	 * 0/0/0, image 1 committed/active/valid. Other OLTs keep image 0.
++	 * Note: only applies once the profile is known (forced, or detected
++	 * before this MIB reset).
++	 */
++	alcl = agent->profile_effective == OMCI_OLT_PROFILE_NOKIA_ALCL;
+ 	for (i = 0; i < ARRAY_SIZE(agent->config.software_version); i++) {
++		bool running = i == (alcl ? 1 : 0);
++
+ 		memset(data, 0, sizeof(data));
+ 		memcpy(data, agent->config.software_version[i],
+ 		       OMCI_SOFTWARE_VERSION_LEN);
+-		data[14] = i == 0; /* Committed image. */
+-		data[15] = i == 0; /* Active image. */
+-		data[16] = 1;      /* Valid image. */
++		data[14] = running; /* Committed image. */
++		data[15] = running; /* Active image. */
++		data[16] = alcl ? running : 1; /* Valid image. */
+ 		ret = omci_mib_add_default_mask(agent, OMCI_CLASS_SOFTWARE_IMAGE,
+ 						i, GENMASK(15, 12), data,
+ 						sizeof(data));
+@@ -3419,6 +3429,7 @@
+ 	struct omci_agent *agent = &odev->agent;
+ 	const struct omci_me_desc *desc;
+ 	struct omci_mib_object *stored = NULL;
++	struct omci_mib_object *seeded;
+ 	struct omci_mib_object *object;
+ 	u8 result = OMCI_RESULT_SUCCESS;
+ 	bool hardware_applied = false;
+@@ -3428,7 +3439,8 @@
+ 		return OMCI_RESULT_UNKNOWN_ME;
+ 	if (!omci_me_action_allowed(agent, class_id, OMCI_MSG_TYPE_CREATE))
+ 		return OMCI_RESULT_NOT_SUPPORTED;
+-	if (omci_mib_lookup(agent, class_id, entity_id))
++	seeded = omci_mib_lookup(agent, class_id, entity_id);
++	if (seeded && seeded->origin == OMCI_MIB_ORIGIN_OLT)
+ 		return OMCI_RESULT_INSTANCE_EXISTS;
+ 
+ 	desc = omci_me_lookup(agent, class_id);
+@@ -3467,6 +3479,27 @@
+ 		goto out;
+ 	}
+ 	hardware_applied = true;
++	if (seeded) {
++		/*
++		 * The Nokia/ALCL profile seeds MEs (bridge profiles and ports,
++		 * mappers) that the OLT then creates again. Merge the OLT's
++		 * attributes into the seeded instance: INSTANCE_EXISTS aborts
++		 * the OLT's provisioning sequence.
++		 */
++		memcpy(seeded->data, object->data, sizeof(seeded->data));
++		seeded->data_len = object->data_len;
++		seeded->attr_mask = object->attr_mask;
++		seeded->vlan_filter = object->vlan_filter;
++		seeded->extended_vlan = object->extended_vlan;
++		seeded->origin = OMCI_MIB_ORIGIN_OLT;
++		if (omci_agent_datapath_class(agent, class_id) &&
++		    omci_agent_reconcile_services_locked(odev)) {
++			result = OMCI_RESULT_PROCESSING_ERROR;
++			goto out;
++		}
++		omci_agent_increment_mib_sync_locked(agent);
++		goto out;
++	}
+ 	ret = omci_mib_store_locked(agent, object);
+ 	if (ret) {
+ 		result = OMCI_RESULT_DEVICE_BUSY;
+--- a/net/xpon/omci/identity.c
++++ b/net/xpon/omci/identity.c
+@@ -306,7 +306,16 @@
+ 		required = OMCI_OLT_EQUIPMENT_ID_LEN;
+ 		if (*output_len < required)
+ 			return -ENOSPC;
+-		ret = omci_normalize_string(value, len, output, required);
++		/*
++		 * The EquipmentIdentifier attribute is space padded and the
++		 * Nokia/ALCL OLT audits it byte for byte, so keep leading
++		 * spaces and pad with spaces, not NULs.
++		 */
++		if (!len || len > required)
++			return -EINVAL;
++		memset(output, ' ', required);
++		memcpy(output, value, len);
++		ret = 0;
+ 		break;
+ 	default:
+ 		return -EOPNOTSUPP;
