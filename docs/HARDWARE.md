@@ -71,3 +71,6 @@ booti 0x80200000 - 0x83000000
 ```
 
 On the white board, U-Boot clears its input buffer during PHY init, just before the autoboot countdown. To stop autoboot, keep sending Enter until the login prompt appears.
+
+## Black: WAN or fibre switch
+A switch on the board routes the PON SerDes lanes. GPIO 33 low sends them to the EN8811H (WAN port), high to the optics. GPIO 34 is low in both. U-Boot sets them from its `switch_flag` env, and AlphaWRT's kernel then sets GPIO 33 from its own WAN flag (`wan-path-gpios`). The EN8811H also needs its reset on GPIO 42.

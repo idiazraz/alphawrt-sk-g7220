@@ -116,6 +116,8 @@ set the boot flag to 1 and rebooted. U-Boot booted the second image, root mounte
 and `mount_root` switched to the UBI overlay, with the existing settings kept.
 This was one run on one board, with a stock overlay restored from backup.
 
+Repeated on 2026-11-02 with stock fully restored and AlphaWRT's data erased: the install came up clean, with no old settings. That image had a WAN bug since fixed; the fixed image hasn't been through the stock page itself, but it has the same format.
+
 Stock's LAN is 192.168.0.1. If that's also your home router's address, connect
 only to the board, or the browser reaches the router instead.
 

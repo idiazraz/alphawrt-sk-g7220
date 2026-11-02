@@ -6,18 +6,22 @@ The PON SerDes carries one or the other. A flag in the last erase block of
 xPON stays off. With no flag the board runs GPON as before, and the PON PCS
 stays off because xPON owns its resets.
 
+A switch on the board routes the lanes, so the optional wan-path GPIO follows
+the same flag. U-Boot sets it from its own env, which is usually pon.
+
 diff -ruN a/drivers/net/ethernet/airoha/airoha_eth.c b/drivers/net/ethernet/airoha/airoha_eth.c
 --- a/drivers/net/ethernet/airoha/airoha_eth.c	2026-11-01 13:26:45.005326927 +0800
 +++ b/drivers/net/ethernet/airoha/airoha_eth.c	2026-11-01 13:26:45.018498138 +0800
-@@ -26,6 +26,7 @@
+@@ -26,6 +26,8 @@
  #include <linux/module.h>
  #include <linux/mutex.h>
  #include <linux/netdevice.h>
++#include <linux/gpio/consumer.h>
 +#include <linux/mtd/mtd.h>
  #include <linux/of.h>
  #include <linux/of_net.h>
  #include <linux/of_reserved_mem.h>
-@@ -9739,6 +9740,33 @@
+@@ -9739,6 +9741,33 @@
  	return airoha_setup_phylink(netdev);
  }
  
@@ -51,15 +55,25 @@ diff -ruN a/drivers/net/ethernet/airoha/airoha_eth.c b/drivers/net/ethernet/airo
  static int airoha_alloc_gdm_port(struct airoha_eth *eth,
  				 struct device_node *np)
  {
-@@ -9786,6 +9814,20 @@
+@@ -9786,6 +9815,30 @@
  	if (econet)
  		return airoha_alloc_gdm_device(eth, port, 0, np);
- 
+
 +	/* The PON SerDes carries GPON or Ethernet WAN, chosen at boot */
 +	if (id == AIROHA_GDM2_IDX) {
++		struct gpio_desc *path;
++
 +		err = airoha_wan_is_ethernet();
 +		if (err < 0)
 +			return err;
++
++		/* A board switch routes the lanes. U-Boot sets it from its own
++		 * switch_flag, which says nothing about our flag.
++		 */
++		path = devm_fwnode_gpiod_get(eth->dev, of_fwnode_handle(np), "wan-path",
++					     err ? GPIOD_OUT_HIGH : GPIOD_OUT_LOW, "wan-path");
++		if (IS_ERR(path) && PTR_ERR(path) != -ENOENT)
++			return PTR_ERR(path);
 +
 +		node = err ? of_get_child_by_name(np, "wan-ethernet") : NULL;
 +		if (node) {

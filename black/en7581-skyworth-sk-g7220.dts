@@ -342,6 +342,9 @@
 	airoha,xpon-managed;
 	openwrt,netdev-name = "pon0";
 
+	/* Board switch for the SerDes lanes: low to the WAN PHY, high to the optics */
+	wan-path-gpios = <&en7581_pinctrl 33 GPIO_ACTIVE_LOW>;
+
 	/* Used instead of the above when the WAN flag on flash says so */
 	wan-ethernet {
 		pcs-handle = <&pon_pcs>;

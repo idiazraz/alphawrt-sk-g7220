@@ -2,7 +2,7 @@
 
 OpenWrt (kernel 6.18) for the Skyworth SK-G7220 GPON ONT with Wi-Fi 7 (MT7992). It is a sister project of [AlphaWRT for the GN630V](https://github.com/idiazraz/gn630v-alphawrt) and uses the same Simple UI, Pi-hole and theme packages.
 
-> **Status: the Black (EN7581) works as a router and installs from stock firmware. [Download the image](https://github.com/idiazraz/alphawrt-sk-g7220/releases/latest).** The fibre (GPON) side is not tested on a real line yet. The White (AN7583) only boots from RAM.
+> **Status: the Black (EN7581) works as a router and installs from stock firmware. [Download the image](https://github.com/idiazraz/alphawrt-sk-g7220/releases/latest).** Fibre (GPON) worked on a real line on an earlier build and hasn't been retested on this one. The White (AN7583) only boots from RAM.
 
 ## Which SK-G7220 do you have?
 There are two SK-G7220 boards with different SoCs. They need separate builds.
@@ -29,7 +29,7 @@ Black only: this image won't work on the White.
 4. Open `http://192.168.1.1`. The root password is blank, as on any OpenWrt install. Set one in Quick Setup.
 5. Choose Router in Quick Setup to use the 2.5G WAN port. The board restarts to switch.
 
-The WAN port and fibre can't run together: the chip shares one link between them, so the mode is chosen at boot. Details and the SSH route: [black/STOCK-UPGRADE.md](black/STOCK-UPGRADE.md). Have a serial console ready if you can, in case an install goes wrong.
+The WAN port and fibre can't run together: a switch on the board routes one link to either the optics or the WAN chip, so the mode is chosen at boot. Details and the SSH route: [black/STOCK-UPGRADE.md](black/STOCK-UPGRADE.md). Have a serial console ready if you can, in case an install goes wrong.
 
 ## Progress
 
@@ -37,16 +37,14 @@ The WAN port and fibre can't run together: the chip shares one link between them
 |---|---|---|
 | Flash install | Yes, from the stock web page | No, signed FIT blocks it |
 | RAM boot | Yes, kernel 6.18 | Yes, kernel 6.18 |
-| WAN | Yes, 2.5G. 1.5 Gb/s measured from board to PC; peak routed speed not measured | 2x 2.5G (EN8811H) in the device tree |
+| WAN | Yes, 2.5G. 911 Mb/s routed, limited by the 1G LAN port; peak not measured | 2x 2.5G (EN8811H) in the device tree |
 | LAN | LAN2-4 1G. LAN1 2.5G linked and passed traffic on a RAM image | 1G switch LAN2-4 |
 | Hardware offload | Yes, wired and Wi-Fi through the NPU | Not tried |
 | Wi-Fi | Yes, Wi-Fi 7, 160 MHz. 867 down, 647 up on an iPhone | PCIe link not up yet |
 | USB, LEDs, buttons | Yes | Yes |
-| GPON | Mode switch works; not tested on a fibre line | Not tried |
+| GPON | Registered and passed traffic on a real line on 31 Oct, earlier build; not retested on this image | Not tried |
 
 Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
-
-Why GPON is the slow part: the open xPON drivers only match `airoha,en7523-xpon`. The EN7581 has the same PON PHY (`0x1faf0000`) and xMAC (`0x1fb6xxxx`) blocks, but adds a USXGMII SerDes (`xpon_usxgmii@1fa80000`) between PON and the frame engine. The optics chip and its calibration offset are not known yet.
 
 ## Layout
 - `white/`: the AN7583 port. `an7583-skyworth-sk-g7220.dts`, `02_network` (from `target/linux/airoha/an7583/base-files/etc/board.d/`), `boot_runner.py` (handles the U-Boot login, PCIe register writes and TFTP RAM boot; the password comes from `UBOOT_PWD`), `uboot-login.sh`, the minimal `ramtest/` DTS and FIT, and the bring-up log in `BRINGUP.md`.
