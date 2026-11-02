@@ -37,9 +37,10 @@ The WAN port and fibre can't run together: a switch on the board routes one link
 |---|---|---|
 | Flash install | Yes, from the stock web page | No, signed FIT blocks it |
 | RAM boot | Yes, kernel 6.18 | Yes, kernel 6.18 |
-| WAN | Yes, 2.5G. 911 Mb/s routed, limited by the 1G LAN port; peak not measured | 2x 2.5G (EN8811H) in the device tree |
+| WAN | Yes, 2.5G. 935 Mb/s routed, limited by the 1G LAN port; peak not measured | 2x 2.5G (EN8811H) in the device tree |
 | LAN | LAN2-4 1G. LAN1 2.5G linked and passed traffic on a RAM image | 1G switch LAN2-4 |
-| Hardware offload | Yes, wired and Wi-Fi through the NPU | Not tried |
+| Hardware offload | Yes, wired and Wi-Fi through the NPU; 0 interrupts at 935 Mb/s | Not tried |
+| Pi-hole, WireGuard, DDNS, UPnP, usteer | Yes, the same packages as the GN630V | Not tried |
 | Wi-Fi | Yes, Wi-Fi 7, 160 MHz. 867 down, 647 up on an iPhone | PCIe link not up yet |
 | USB, LEDs, buttons | Yes | Yes |
 | GPON | Registered and passed traffic on a real line on 31 Oct, earlier build; not retested on this image | Not tried |
@@ -52,7 +53,7 @@ Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
 - `tools/`: `uart.py` (UART logger that stops autoboot and takes commands from a FIFO), `serial_cmd.py`, `stock-backup.sh` (read-only partition dump over SSH from stock).
 - `docs/`: hardware notes for both boards and the RAM-boot procedure.
 - `white/openwrt-an7583.patch`: the device profile and board.d changes for the OpenWrt tree.
-- The AlphaWRT packages (`alphawrt-ui`, `alphawrt-pihole`, `luci-theme-alphawrt`, ...) are not copied here. The build takes them from the GN630V repo, so both boxes get the same UI.
+- The AlphaWRT packages (`alphawrt-ui`, `alphawrt-pihole`, `luci-theme-alphawrt`, ...) are not copied here. The build takes them all from the GN630V repo, so both boxes get the same features. `bridger` is left out on the Black until it's ported.
 
 Run the serial scripts from this repo's root. Logs, `cmd.in`, dumps and TFTP files go in `backup/`, which git ignores.
 

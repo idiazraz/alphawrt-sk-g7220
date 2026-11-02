@@ -32,18 +32,21 @@ cp "$HERE/93_alphawrt_flow_offload" "$TREE/target/linux/airoha/an7581/base-files
 
 # AlphaWRT UI packages
 mkdir -p "$TREE/package/alphawrt"
-for p in alphawrt-ui luci-app-alphawrt luci-theme-alphawrt; do
-	rm -rf "$TREE/package/alphawrt/$p"
-	cp -R "$ALPHAWRT_PKGS/$p" "$TREE/package/alphawrt/"
+for p in "$ALPHAWRT_PKGS"/*/; do
+	rm -rf "$TREE/package/alphawrt/$(basename "$p")"
+	cp -R "$p" "$TREE/package/alphawrt/"
 done
 
 cd "$TREE"
 cp "$HERE/feeds.conf" feeds.conf   # pinned: the versions the working image was built from
 ./scripts/feeds update -a
 ./scripts/feeds install -a
+cp "$HERE/giflib-990-target-is-linux.patch" feeds/packages/libs/giflib/patches/
 cp "$HERE/config.seed" .config
 if [ "$(uname)" = Darwin ]; then
 	B=$(brew --prefix)
+	grep -q -- '-liconv' feeds/packages/libs/glib2/Makefile ||
+		sed -i '/^define Build\/InstallDev/i HOST_LDFLAGS += -liconv\nMESON_HOST_ARGS += -Dobjc_link_args="-L$(STAGING_DIR_HOSTPKG)/lib -liconv"\n' feeds/packages/libs/glib2/Makefile
 	cat >> .config <<EOC
 CONFIG_BPF_TOOLCHAIN_HOST=y
 CONFIG_BPF_TOOLCHAIN_HOST_PATH="$B/opt/llvm"
