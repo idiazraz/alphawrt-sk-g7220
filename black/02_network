@@ -29,8 +29,12 @@ an7581_setup_interfaces()
 		ucidef_set_interface_lan "lan1 lan2"
 		;;
 	skyworth,sk-g7220)
-		# All copper ports are LAN; the upstream connection is PON.
-		ucidef_set_interface_lan "lan1 lan2 lan3 lan4 lan5"
+		# The router build has wan; in the ONT build the upstream is PON.
+		if [ -d /sys/class/net/wan ]; then
+			ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan"
+		else
+			ucidef_set_interface_lan "lan1 lan2 lan3 lan4 lan5"
+		fi
 		;;
 	*)
 		echo "Unsupported hardware. Network interfaces not initialized"

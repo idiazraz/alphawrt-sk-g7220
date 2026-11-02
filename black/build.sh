@@ -24,7 +24,11 @@ fi
 mkdir -p "$TREE/target/linux/airoha/base-files/lib/preinit"
 cp "$HERE/79_alphawrt_ubi" "$TREE/target/linux/airoha/base-files/lib/preinit/"
 mkdir -p "$TREE/target/linux/airoha/an7581/base-files/etc/board.d"
-cp "$HERE/02_network" "$TREE/target/linux/airoha/an7581/base-files/etc/board.d/"
+cp "$HERE/01_leds" "$HERE/02_network" "$TREE/target/linux/airoha/an7581/base-files/etc/board.d/"
+mkdir -p "$TREE/target/linux/airoha/an7581/base-files/sbin"
+cp "$HERE/alphawrt-wan-mode" "$TREE/target/linux/airoha/an7581/base-files/sbin/"
+mkdir -p "$TREE/target/linux/airoha/an7581/base-files/etc/uci-defaults"
+cp "$HERE/93_alphawrt_flow_offload" "$TREE/target/linux/airoha/an7581/base-files/etc/uci-defaults/"
 
 # AlphaWRT UI packages
 mkdir -p "$TREE/package/alphawrt"

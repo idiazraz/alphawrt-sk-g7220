@@ -1,0 +1,33 @@
+From: AlphaWRT
+Subject: net: airoha: npu: read AN7581 IRQs in device tree order
+
+The AN7581 binding lists the mailbox, the core watchdogs, then the WLAN lines.
+Probe read WLAN right after the mailbox, so it ran off the end of the list with
+"IRQ index 15 not found" and the NPU never started.
+
+diff -ruN a/drivers/net/ethernet/airoha/airoha_npu.c b/drivers/net/ethernet/airoha/airoha_npu.c
+--- a/drivers/net/ethernet/airoha/airoha_npu.c	2026-11-02 01:26:54.624674344 +0800
++++ b/drivers/net/ethernet/airoha/airoha_npu.c	2026-11-02 01:26:54.642106896 +0800
+@@ -1933,9 +1933,11 @@
+ 	if (err)
+ 		return err;
+ 
+-	/* WLAN IRQ lines follow the mailbox IRQ on both NPU revisions. */
++	/* WLAN IRQ lines follow the mailbox on NPU v1, the watchdogs on v2 */
+ 	for (i = 0; i < ARRAY_SIZE(npu->irqs); i++) {
+-		irq = platform_get_irq(pdev, i + 1);
++		irq = platform_get_irq(pdev, i + 1 +
++				       (npu->soc_data->version < NPU_V2 ? 0 :
++					npu->soc_data->max_cores));
+ 		if (irq < 0)
+ 			return irq;
+ 
+@@ -1965,7 +1967,7 @@
+ 		if (npu->soc_data->version < NPU_V2)
+ 			continue;
+ 
+-		irq = platform_get_irq(pdev, i + npu->soc_data->max_cores + 1);
++		irq = platform_get_irq(pdev, i + 1);
+ 		if (irq < 0)
+ 			return irq;
+ 

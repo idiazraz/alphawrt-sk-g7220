@@ -1,0 +1,26 @@
+From: AlphaWRT
+Subject: net: airoha: npu: give the firmware its TX buffer ID check region
+
+The MT7992 firmware keeps tx_bufid_pool_chk at the address sent with
+WLAN_FUNC_SET_WAIT_TX_BUF_CHECK_ADDR. Nothing sent it, so setting up the TX
+done ring wrote through a null pointer, the NPU stopped answering its mailbox,
+and mt7996e probe failed with -110. The tx-bufid region was already reserved.
+
+diff -ruN a/drivers/net/ethernet/airoha/airoha_npu.c b/drivers/net/ethernet/airoha/airoha_npu.c
+--- a/drivers/net/ethernet/airoha/airoha_npu.c	2026-11-02 03:24:11.162049312 +0800
++++ b/drivers/net/ethernet/airoha/airoha_npu.c	2026-11-02 03:24:11.180039791 +0800
+@@ -701,6 +701,14 @@
+ 	}
+ 
+ 	if (of_property_match_string(npu->dev->of_node, "memory-region-names",
++				     "tx-bufid") >= 0) {
++		cmd = WLAN_FUNC_SET_WAIT_TX_BUF_CHECK_ADDR;
++		err = airoha_npu_wlan_set_reserved_memory(npu, 0, "tx-bufid", cmd);
++		if (err)
++			return err;
++	}
++
++	if (of_property_match_string(npu->dev->of_node, "memory-region-names",
+ 				     "ba") >= 0) {
+ 		cmd = WLAN_FUNC_SET_WAIT_DRAM_BA_NODE_ADDR;
+ 		err = airoha_npu_wlan_set_reserved_memory(npu, 0, "ba", cmd);

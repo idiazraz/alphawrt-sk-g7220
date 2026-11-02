@@ -1,0 +1,128 @@
+From: AlphaWRT
+Subject: net: airoha: choose GPON or Ethernet WAN on the PON SerDes at boot
+
+The PON SerDes carries one or the other. A flag in the last erase block of
+"others" selects Ethernet WAN: GDM2 then uses its wan-ethernet child node and
+xPON stays off. With no flag the board runs GPON as before, and the PON PCS
+stays off because xPON owns its resets.
+
+diff -ruN a/drivers/net/ethernet/airoha/airoha_eth.c b/drivers/net/ethernet/airoha/airoha_eth.c
+--- a/drivers/net/ethernet/airoha/airoha_eth.c	2026-11-01 13:26:45.005326927 +0800
++++ b/drivers/net/ethernet/airoha/airoha_eth.c	2026-11-01 13:26:45.018498138 +0800
+@@ -26,6 +26,7 @@
+ #include <linux/module.h>
+ #include <linux/mutex.h>
+ #include <linux/netdevice.h>
++#include <linux/mtd/mtd.h>
+ #include <linux/of.h>
+ #include <linux/of_net.h>
+ #include <linux/of_reserved_mem.h>
+@@ -9739,6 +9740,33 @@
+ 	return airoha_setup_phylink(netdev);
+ }
+ 
++/* Last erase block of "others": "wan=ethernet" selects Ethernet WAN, anything
++ * else leaves GPON on the PON SerDes.
++ */
++#define ALPHAWRT_WAN_MTD	"others"
++#define ALPHAWRT_WAN_OFFSET	0x1e0000
++#define ALPHAWRT_WAN_ETHERNET	"wan=ethernet"
++
++int airoha_wan_is_ethernet(void)
++{
++	char buf[sizeof(ALPHAWRT_WAN_ETHERNET) - 1];
++	struct mtd_info *mtd;
++	size_t retlen = 0;
++	int err;
++
++	mtd = get_mtd_device_nm(ALPHAWRT_WAN_MTD);
++	if (IS_ERR(mtd))
++		return -EPROBE_DEFER;
++
++	err = mtd_read(mtd, ALPHAWRT_WAN_OFFSET, sizeof(buf), &retlen, buf);
++	put_mtd_device(mtd);
++	if ((err && !mtd_is_bitflip(err)) || retlen != sizeof(buf))
++		return 0;
++
++	return !memcmp(buf, ALPHAWRT_WAN_ETHERNET, sizeof(buf));
++}
++EXPORT_SYMBOL_GPL(airoha_wan_is_ethernet);
++
+ static int airoha_alloc_gdm_port(struct airoha_eth *eth,
+ 				 struct device_node *np)
+ {
+@@ -9786,6 +9814,20 @@
+ 	if (econet)
+ 		return airoha_alloc_gdm_device(eth, port, 0, np);
+ 
++	/* The PON SerDes carries GPON or Ethernet WAN, chosen at boot */
++	if (id == AIROHA_GDM2_IDX) {
++		err = airoha_wan_is_ethernet();
++		if (err < 0)
++			return err;
++
++		node = err ? of_get_child_by_name(np, "wan-ethernet") : NULL;
++		if (node) {
++			err = airoha_alloc_gdm_device(eth, port, 0, node);
++			of_node_put(node);
++			return err;
++		}
++	}
++
+ 	for_each_child_of_node(np, node) {
+ 		const __be32 *nbq_ptr;
+ 
+diff -ruN a/drivers/net/ethernet/airoha/airoha_eth.h b/drivers/net/ethernet/airoha/airoha_eth.h
+--- a/drivers/net/ethernet/airoha/airoha_eth.h	2026-11-01 13:26:45.006616306 +0800
++++ b/drivers/net/ethernet/airoha/airoha_eth.h	2026-11-01 13:26:45.020781270 +0800
+@@ -4999,4 +4999,6 @@
+ 		__r.w; \
+ 	})
+ 
++int airoha_wan_is_ethernet(void);
++
+ #endif /* AIROHA_ETH_H */
+diff -ruN a/drivers/net/ethernet/airoha/airoha_xpon.c b/drivers/net/ethernet/airoha/airoha_xpon.c
+--- a/drivers/net/ethernet/airoha/airoha_xpon.c	2026-11-01 13:26:45.007845935 +0800
++++ b/drivers/net/ethernet/airoha/airoha_xpon.c	2026-11-01 13:26:45.021576482 +0800
+@@ -4391,6 +4391,11 @@
+ 	struct resource *res;
+ 	int ret;
+ 
++	/* The PON SerDes is carrying Ethernet WAN on this boot */
++	ret = airoha_wan_is_ethernet();
++	if (ret)
++		return ret < 0 ? ret : -ENODEV;
++
+ 	data = device_get_match_data(&pdev->dev);
+ 	if (!data)
+ 		return -EINVAL;
+diff -ruN a/drivers/net/pcs/airoha/pcs-airoha-common.c b/drivers/net/pcs/airoha/pcs-airoha-common.c
+--- a/drivers/net/pcs/airoha/pcs-airoha-common.c	2026-11-01 13:49:12.855452197 +0800
++++ b/drivers/net/pcs/airoha/pcs-airoha-common.c	2026-11-01 13:49:12.875361600 +0800
+@@ -1240,6 +1240,13 @@
+ 
+ 	data = of_device_get_match_data(dev);
+ 
++	/* xPON owns these resets unless this boot is Ethernet WAN */
++	if (data->port_type == AIROHA_PCS_PON) {
++		ret = airoha_wan_is_ethernet();
++		if (ret <= 0)
++			return ret ?: -ENODEV;
++	}
++
+ 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+ 	if (!priv)
+ 		return -ENOMEM;
+diff -ruN a/drivers/net/pcs/airoha/pcs-airoha.h b/drivers/net/pcs/airoha/pcs-airoha.h
+--- a/drivers/net/pcs/airoha/pcs-airoha.h	2026-11-01 13:49:12.856054532 +0800
++++ b/drivers/net/pcs/airoha/pcs-airoha.h	2026-11-01 13:49:12.875622768 +0800
+@@ -13,6 +13,8 @@
+ /* SCU*/
+ #define AIROHA_SCU_PDIDR			0x5c
+ #define   AIROHA_SCU_PRODUCT_ID			GENMASK(15, 0)
++int airoha_wan_is_ethernet(void);
++
+ #define AIROHA_SCU_WAN_CONF			0x70
+ #define   AIROHA_SCU_ETH_MAC_SEL		BIT(24)
+ #define   AIROHA_SCU_ETH_MAC_SEL_XFI		FIELD_PREP_CONST(AIROHA_SCU_ETH_MAC_SEL, 0x0)

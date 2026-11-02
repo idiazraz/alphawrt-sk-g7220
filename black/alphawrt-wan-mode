@@ -1,0 +1,50 @@
+#!/bin/sh
+# Choose what the PON SerDes carries: fibre (GPON) or ethernet (2.5G WAN port).
+# The driver reads the flag at boot, so a change needs a reboot.
+# Usage: alphawrt-wan-mode [fibre|ethernet]
+OFFSET=0x1e0000
+FLAG=wan=ethernet
+MTD=/dev/$(grep '"others"' /proc/mtd | cut -d: -f1)
+
+current() {
+	[ "$(dd if="$MTD" bs=131072 skip=15 count=1 2>/dev/null | head -c ${#FLAG})" = "$FLAG" ] &&
+		echo ethernet || echo fibre
+}
+
+case "$1" in
+"")
+	current
+	;;
+fibre|ethernet)
+	[ "$(current)" = "$1" ] && exit 0
+	flash_erase -q "$MTD" "$OFFSET" 1 || exit 1
+	if [ "$1" = ethernet ]; then
+		printf %s "$FLAG" > /tmp/wan-mode
+		nandwrite -q -p -s "$OFFSET" "$MTD" /tmp/wan-mode || exit 1
+		uci set network.wan=interface
+		case "$(uci -q get network.wan.device)" in
+		wan|wan.*) ;;
+		*) uci set network.wan.device=wan ;;
+		esac
+		[ -n "$(uci -q get network.wan.proto)" ] || uci set network.wan.proto=dhcp
+		uci -q delete network.wan.disabled
+		uci commit network
+		uci -q set system.led_wan.dev=wan
+	else
+		if uci -q get network.wan.device | grep -q '^wan'; then
+			uci set network.wan.device=pon0
+			uci set network.wan.disabled=1
+			uci commit network
+		fi
+		uci -q set system.led_wan.dev=pon0
+	fi
+	uci -q commit system
+	sync
+	[ "$(current)" = "$1" ] || { echo "flag did not stick" >&2; exit 1; }
+	echo "$1 selected: reboot to apply"
+	;;
+*)
+	echo "usage: $0 [fibre|ethernet]" >&2
+	exit 1
+	;;
+esac

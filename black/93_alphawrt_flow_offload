@@ -1,0 +1,5 @@
+# Wired LAN and WAN flows go through the PPE. The Wi-Fi radios stay in software.
+uci -q set firewall.@defaults[0].flow_offloading=1
+uci -q set firewall.@defaults[0].flow_offloading_hw=1
+uci -q commit firewall
+exit 0
