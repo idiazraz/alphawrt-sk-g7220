@@ -2,7 +2,7 @@
 
 OpenWrt (kernel 6.18) for the Skyworth SK-G7220 GPON ONT with Wi-Fi 7 (MT7992). It is a sister project of [AlphaWRT for the GN630V](https://github.com/idiazraz/gn630v-alphawrt) and uses the same Simple UI, Pi-hole and theme packages.
 
-> **Status: bring-up. No flashable image yet.** Nothing here has been written to flash. So far the board has only been booted from RAM over U-Boot TFTP.
+> **Status: the Black (EN7581) works as a router and installs from stock firmware. [Download the image](https://github.com/idiazraz/alphawrt-sk-g7220/releases/latest).** The fibre (GPON) side is not tested on a real line yet. The White (AN7583) only boots from RAM.
 
 ## Which SK-G7220 do you have?
 There are two SK-G7220 boards with different SoCs. They need separate builds.
@@ -20,37 +20,37 @@ There are two SK-G7220 boards with different SoCs. They need separate builds.
 
 Check the SoC marking or the U-Boot banner. The colour alone may not tell you the board.
 
+## Install on the Black
+Black only: this image won't work on the White.
+
+1. On stock, connect to a LAN port. Stock is at `192.168.0.1`. If your home router uses the same address, connect only to the board.
+2. On the firmware upgrade page, upload `sk-g7220-black-alphawrt-tclinux-factory.bin`. Keep `tclinux` in the file name, stock needs it.
+3. The board writes the spare bank and restarts. Stock stays in the other bank.
+4. Open `http://192.168.1.1`. The root password is blank, as on any OpenWrt install. Set one in Quick Setup.
+5. Choose Router in Quick Setup to use the 2.5G WAN port. The board restarts to switch.
+
+The WAN port and fibre can't run together: the chip shares one link between them, so the mode is chosen at boot. Details and the SSH route: [black/STOCK-UPGRADE.md](black/STOCK-UPGRADE.md). Have a serial console ready if you can, in case an install goes wrong.
+
 ## Progress
 
 | | Black (EN7581) | White (AN7583) |
 |---|---|---|
-| Serial console | Yes | Yes |
-| RAM boot (initramfs) | Yes, kernel 6.18 (4 CPUs, 1 GiB) | Yes, kernel 6.18 |
-| Device tree | Written, boots | Written, compiles |
-| Ethernet | LAN1 2.5G (EN8811H) passes traffic; LAN2-4 switch up | 2x 2.5G (EN8811H), 1G switch LAN2-4 |
+| Flash install | Yes, from the stock web page | No, signed FIT blocks it |
+| RAM boot | Yes, kernel 6.18 | Yes, kernel 6.18 |
+| WAN | Yes, 2.5G. 1.5 Gb/s measured from board to PC; peak routed speed not measured | 2x 2.5G (EN8811H) in the device tree |
+| LAN | LAN2-4 1G. LAN1 2.5G linked and passed traffic on a RAM image | 1G switch LAN2-4 |
+| Hardware offload | Yes, wired and Wi-Fi through the NPU | Not tried |
+| Wi-Fi | Yes, Wi-Fi 7, 160 MHz. 867 down, 647 up on an iPhone | PCIe link not up yet |
 | USB, LEDs, buttons | Yes | Yes |
-| Wi-Fi (PCIe + MT7992) | PCIe up, MT7992 found; driver not in test image | PCIe link not up yet |
-| Flash install | — | — (signed FIT blocks it) |
+| GPON | Mode switch works; not tested on a fibre line | Not tried |
 
 Hardware details: [docs/HARDWARE.md](docs/HARDWARE.md).
 
-## Port estimate (2026-10-29)
-Black first. White stays RAM-boot only while its signed FIT blocks flash installs.
-
-| Black step | Estimate |
-|---|---|
-| RAM boot: Ethernet, Wi-Fi, LEDs, buttons | 1-3 days |
-| `tclinux` image and install from stock (GN630V tooling) | 2-4 days |
-| AlphaWRT packages and tests | 2-3 days |
-| GPON (full ONT replacement) | 3-6 weeks, uncertain |
-
-Why the black board is quick: `airoha/an7581` already has EN7581 + MT7992 boards (`an7581-w1700k`, Nokia XG-040G-MD, `an7581-npu-mt7992.dtsi`), NPU Wi-Fi offload works for the MT7992, and stock images are only SHA-1 hashed.
-
-Why GPON is slow: the open xPON drivers only match `airoha,en7523-xpon`. The EN7581 stock FDT has the same PON PHY (`0x1faf0000`) and xMAC (`0x1fb6xxxx`) blocks, but adds a USXGMII SerDes (`xpon_usxgmii@1fa80000`) between PON and the frame engine. The optics chip and its calibration offset are not known yet. Fallback if GPON stalls: ship as a Wi-Fi 7 router or bridge behind the ISP ONT.
+Why GPON is the slow part: the open xPON drivers only match `airoha,en7523-xpon`. The EN7581 has the same PON PHY (`0x1faf0000`) and xMAC (`0x1fb6xxxx`) blocks, but adds a USXGMII SerDes (`xpon_usxgmii@1fa80000`) between PON and the frame engine. The optics chip and its calibration offset are not known yet.
 
 ## Layout
 - `white/`: the AN7583 port. `an7583-skyworth-sk-g7220.dts`, `02_network` (from `target/linux/airoha/an7583/base-files/etc/board.d/`), `boot_runner.py` (handles the U-Boot login, PCIe register writes and TFTP RAM boot; the password comes from `UBOOT_PWD`), `uboot-login.sh`, the minimal `ramtest/` DTS and FIT, and the bring-up log in `BRINGUP.md`.
-- `black/`: the EN7581 port. So far only the stock device tree (`stock-fdt.dts`, the reference for `en7581-skyworth-sk-g7220.dts`) and `listen_black.py` (UART logger).
+- `black/`: the EN7581 port. The device tree (`en7581-skyworth-sk-g7220.dts`, with the stock tree `stock-fdt.dts` as reference), kernel patches, `build.sh`, `config.seed` and the flash image tools (`mk_flash_image.sh`, `mk_tclinux.py`, `check_tclinux.py`). `mk_tclinux.py` also needs the 0x2000 prefix from a stock image, which isn't in this repo.
 - `tools/`: `uart.py` (UART logger that stops autoboot and takes commands from a FIFO), `serial_cmd.py`, `stock-backup.sh` (read-only partition dump over SSH from stock).
 - `docs/`: hardware notes for both boards and the RAM-boot procedure.
 - `white/openwrt-an7583.patch`: the device profile and board.d changes for the OpenWrt tree.
