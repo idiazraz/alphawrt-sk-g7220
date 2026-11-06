@@ -23,7 +23,7 @@ alphawrt_preinit_ubi() {
 		ubiformat "/dev/mtd$mtdnum" -y -q || return 0
 	ubiattach -m "$mtdnum" -d 0 >/dev/null 2>&1 || return 0
 	alphawrt_ubi_node ubi0 || return 0
-	# ponytail: rootfs_data is the only volume, so always ubi0_0
+	# Note: rootfs_data is the only volume, so always ubi0_0
 	[ -e /sys/class/ubi/ubi0_0 ] ||
 		ubimkvol /dev/ubi0 -N rootfs_data -m >/dev/null 2>&1
 	alphawrt_ubi_node ubi0_0
