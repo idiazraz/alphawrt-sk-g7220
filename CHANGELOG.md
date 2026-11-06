@@ -12,6 +12,10 @@ How this file is kept:
 ## Unreleased
 
 ### Added
+- **Speed test** page: download, upload, ping and jitter, measured by the box itself against the nearest Speedtest.net servers, or one you pick. Wi-Fi and your own device don’t slow the result.
+- **Light and dark mode switch** in the Simple UI (sidebar, or the top bar on a phone) and in Advanced (LuCI): Auto follows your device, or pick Light or Dark. Both share the choice.
+- **Change the internet login** (PPPoE username and password) from the Network page, without running Quick Setup again.
+- **Fibre page shows the serial number and PLOAM password** the box gives your provider. The password stays hidden until you tap the eye.
 - **Tailscale**, with a Tailscale card on the VPN page.
 - **Block a device's internet** from the Devices page: tap a device and switch on "Block its Internet". It stays on Wi-Fi and the home network, but can't reach the internet until you unblock it. Not in bridge mode.
 - **Network page:** this box's address and DHCP range, where names are looked up (DNS), IPv6, local names and port forwards, all in one place.

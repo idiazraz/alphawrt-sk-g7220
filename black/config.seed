@@ -15,6 +15,7 @@ CONFIG_KERNEL_BUILD_USER="alphawrt"
 CONFIG_KERNEL_BUILD_DOMAIN="alphawrt"
 CONFIG_PACKAGE_kmod-usb-ledtrig-usbport=y
 CONFIG_PACKAGE_alphawrt-pihole=y
+CONFIG_PACKAGE_alphawrt-speedtest=y
 CONFIG_PACKAGE_pihole-ftl=y
 CONFIG_PACKAGE_pihole-web=y
 CONFIG_PACKAGE_dnsproxy=y
