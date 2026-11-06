@@ -1,8 +1,6 @@
-# Wired LAN and WAN flows go through the PPE on the WAN port. On the fibre path
-# the PPE stalls TCP, so flows stay in software there. The Wi-Fi radios stay in software.
-hw=0
-[ "$(/sbin/alphawrt-wan-mode)" = ethernet ] && hw=1
+# Wired LAN and WAN flows go through the PPE on both WAN paths (fibre needs the
+# GPON tags from patch 9999). The Wi-Fi radios stay in software.
 uci -q set firewall.@defaults[0].flow_offloading=1
-uci -q set firewall.@defaults[0].flow_offloading_hw=$hw
+uci -q set firewall.@defaults[0].flow_offloading_hw=1
 uci -q commit firewall
 exit 0

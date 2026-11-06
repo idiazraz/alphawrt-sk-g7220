@@ -31,7 +31,6 @@ fibre|ethernet)
 		uci -q delete network.wan.disabled
 		uci commit network
 		uci -q set system.led_wan.dev=wan
-		uci -q set firewall.@defaults[0].flow_offloading_hw=1
 	else
 		if uci -q get network.wan.device | grep -q '^wan'; then
 			uci set network.wan.device=pon0
@@ -39,8 +38,8 @@ fibre|ethernet)
 			uci commit network
 		fi
 		uci -q set system.led_wan.dev=pon0
-		uci -q set firewall.@defaults[0].flow_offloading_hw=0
 	fi
+	uci -q set firewall.@defaults[0].flow_offloading_hw=1
 	uci -q commit system
 	uci -q commit firewall
 	sync

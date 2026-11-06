@@ -1,0 +1,38 @@
+From: idiazraz <100824525+idiazraz@users.noreply.github.com>
+Subject: [PATCH] net: airoha: tag PPE flows to the GPON port on AN7581 too
+
+The CPU path tags every frame for a GPON port with its GEM port ID,
+T-CONT channel and queue on each SoC with gpon_metadata (EN7523 and
+AN7581). The PPE only filled those fields on EN7523, so on AN7581 a
+bound upstream flow left through GDM2 with no GEM tag and channel 2.
+The OLT never saw those frames: once TCP's upstream ACKs bound, the
+download stalled at a few KB/s.
+
+Gate the GPON metadata on gpon_metadata, the same test the CPU path
+uses. The FOE fields match the vendor SDK for AN7581: EtherType
+carries the GEM ID, channel and NBQ the T-CONT.
+---
+--- a/drivers/net/ethernet/airoha/airoha_ppe.c
++++ b/drivers/net/ethernet/airoha/airoha_ppe.c
+@@ -660,7 +660,11 @@
+ 				return -EINVAL;
+ 			}
+ 
+-			if (airoha_is(eth, airoha_en7523) &&
++			/* Every SoC whose CPU path tags GPON frames (EN7523,
++			 * AN7581) needs the same GEM/T-CONT tags in the FOE,
++			 * or bound upstream frames leave untagged and are lost.
++			 */
++			if (eth->soc->gpon_metadata &&
+ 			    (dev->flags & AIROHA_PRIV_F_XPON_MANAGED) &&
+ 			    dev->xpon_mode == AIROHA_XPON_MODE_GPON) {
+ 				int ret;
+@@ -784,7 +788,7 @@
+ 		l2->etype = BIT(dsa_port);
+ 		l2->etype |= !data->vlan.num ? BIT(15) : 0;
+ 	} else if (xpon_flow) {
+-		/* EN7523 reuses the FOE EtherType field as the GPON GEM tag. */
++		/* The FOE EtherType field carries the GPON GEM tag. */
+ 		l2->etype = xpon.gem_port_id;
+ 	} else if (data->pppoe.num) {
+ 		l2->etype = ETH_P_PPP_SES;
