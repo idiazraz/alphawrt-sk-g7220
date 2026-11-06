@@ -16,6 +16,10 @@ if [ ! -d "$TREE/.git" ]; then
 	git -C "$TREE" checkout -b alphawrt-black "$REV"
 	git -C "$TREE" apply "$HERE/openwrt-tree.patch"
 fi
+# OpenWrt package fixes shared with the other models; skipped when already in the tree
+for p in "$HERE/../../alphawrt/patches/0044-dnsmasq-keep-respawning-after-restarts.patch"; do
+	git -C "$TREE" apply --reverse --check "$p" 2>/dev/null || git -C "$TREE" apply "$p"
+done
 cp "$HERE/en7581-skyworth-sk-g7220.dts" "$TREE/target/linux/airoha/dts/"
 mkdir -p "$TREE/target/linux/airoha/patches-6.18"
 if [ -d "$HERE/patches" ]; then
