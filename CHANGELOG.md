@@ -27,6 +27,7 @@ How this file is kept:
 - **Home** names the encrypted DNS servers, and the **Wi-Fi page** points printers and older devices to WPA2 only.
 
 ### Fixed
+- **Unifi (TM) fibre: no internet, the line registers but never gets service.** The box now tells the provider's equipment about every kind of setting the stock firmware supports, so TM's Nokia equipment no longer stops before setting up the internet connection. Not yet confirmed on a Unifi line.
 - **Network page could show only "Something went wrong"** after an upgrade, when a port forward had been made in Advanced (LuCI). The page now opens and lists that forward.
 - **Fibre downloads stalled to a crawl** with hardware offload on. Hardware offload is now on by default on fibre too.
 - **WireGuard could never be set up:** the VPN page sent you back to the login screen.
