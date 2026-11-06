@@ -58,6 +58,9 @@ How this file is kept:
 - **First public image:** installs from the stock firmware upgrade page, and keeps stock in the other firmware bank.
 - **Fibre (GPON) or 2.5G WAN**, chosen at boot. Router in Quick Setup picks the WAN port.
 - **Simple UI** with Quick Setup, and LuCI under Advanced.
+- **Quick Setup country step** after the password: pick your country so Wi-Fi uses its legal channels and power. Changing it resets each band to an automatic channel and a width the country allows.
+- **Fibre provisioning page:** a map of what the ISP's equipment (OLT) set up on the box, with every setting decoded.
+- **Advanced menu** grouped into Status, Fibre, Network, Wi-Fi and VPN. One login works for both the Simple UI and Advanced.
 - **Hardware offload** for wired routing, and **Wi-Fi 7** through the network processor. 5 GHz runs at 160 MHz.
 - LEDs, buttons and USB work.
 
