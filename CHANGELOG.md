@@ -31,6 +31,8 @@ How this file is kept:
 - **Home** names the encrypted DNS servers, and the **Wi-Fi page** points printers and older devices to WPA2 only.
 
 ### Fixed
+- **The box could restart by itself on fibre**, about once every couple of days: a fault in the fibre driver's line-quality check crashed it. Fixed.
+- **2.4 GHz Wi-Fi could stay off after a restart:** on Auto channel, the box could pick channel 14, which Wi-Fi 4/5/6/7 can't use, and 2.4 GHz didn't start. Auto now picks from channels 1-13.
 - **Unifi (TM) fibre: no internet, the line registers but never gets service.** The box now tells the provider's equipment about every kind of setting the stock firmware supports, so TM's Nokia equipment no longer stops before setting up the internet connection. Not yet confirmed on a Unifi line.
 - **Network page could show only "Something went wrong"** after an upgrade, when a port forward had been made in Advanced (LuCI). The page now opens and lists that forward.
 - **Fibre downloads stalled to a crawl** with hardware offload on. Hardware offload is now on by default on fibre too.

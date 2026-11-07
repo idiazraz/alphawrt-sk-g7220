@@ -2970,12 +2970,12 @@ index 0000000..aec196c
 +static int an7581_get_link_state(struct airoha_xpon_phy *priv,
 +				 bool *ready, bool *los)
 +{
-+	struct an7581_xpon_phy *an = priv->soc_priv;
++	bool on = READ_ONCE(priv->powered);
 +
-+	mutex_lock(&an->lock);
-+	*los = !priv->powered || an7581_los(priv);
-+	*ready = priv->powered && an7581_ready(priv);
-+	mutex_unlock(&an->lock);
++	/* Note: no lock, the GPON BER timer calls this in atomic context */
++	*los = !on || an7581_los(priv);
++	*ready = on && an7581_ready(priv);
++	/* readl() and flag reads only, like the core's generic path */
 +	return 0;
 +}
 +
@@ -4194,12 +4194,12 @@ index 0000000..e57ecb3
 +static int an7581_get_link_state(struct airoha_xpon_phy *priv,
 +				 bool *ready, bool *los)
 +{
-+	struct an7581_xpon_phy *an = priv->soc_priv;
++	bool on = READ_ONCE(priv->powered);
 +
-+	mutex_lock(&an->lock);
-+	*los = !priv->powered || an7581_los(priv);
-+	*ready = priv->powered && an7581_ready(priv);
-+	mutex_unlock(&an->lock);
++	/* Note: no lock, the GPON BER timer calls this in atomic context */
++	*los = !on || an7581_los(priv);
++	*ready = on && an7581_ready(priv);
++	/* readl() and flag reads only, like the core's generic path */
 +	return 0;
 +}
 +
