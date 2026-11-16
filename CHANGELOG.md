@@ -29,6 +29,7 @@ How this file is kept:
 - **Pi-hole catches devices with their own DNS:** with Pi-hole on, devices that set their own plain DNS server are sent to the box anyway, and browsers are told to fall back to it. Devices with strict encrypted DNS (for example Android Private DNS set to dns.google, or an iPhone DNS profile) keep working. Blocking encrypted DNS as well is a switch on the Pi-hole page, "Stop devices skipping Pi-hole", off by default.
 - **Every page tidied** on desktop and phone: the VPN page uses the same cards as the rest, Fibre charts are readable on a phone, and notes have an info icon.
 - **Home** names the encrypted DNS servers, and the **Wi-Fi page** points printers and older devices to WPA2 only.
+- **Network work spread over more CPU cores:** wired and fibre traffic the box handles itself (for example the Speed test, VPN and DNS) was all processed on the first core; LAN now goes to the second core and fibre to the third, so the first core has room left under load.
 
 ### Fixed
 - **IPv6 on Unifi (TM) and other PPPoE lines:** turning on IPv6 now asks the provider through a separate DHCPv6 client, which Unifi answers, instead of PPPoE's built-in way, which got no IPv6 on Unifi. Turn IPv6 off and on again on the Network page, or rerun Quick Setup, to switch an existing box over.

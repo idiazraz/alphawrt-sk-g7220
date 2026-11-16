@@ -33,6 +33,8 @@ mkdir -p "$TREE/target/linux/airoha/an7581/base-files/sbin"
 cp "$HERE/alphawrt-wan-mode" "$TREE/target/linux/airoha/an7581/base-files/sbin/"
 mkdir -p "$TREE/target/linux/airoha/an7581/base-files/etc/uci-defaults"
 cp "$HERE/93_alphawrt_flow_offload" "$TREE/target/linux/airoha/an7581/base-files/etc/uci-defaults/"
+mkdir -p "$TREE/target/linux/airoha/an7581/base-files/usr/libexec/platform"
+cp "$HERE/packet-steering.sh" "$TREE/target/linux/airoha/an7581/base-files/usr/libexec/platform/"
 
 # AlphaWRT UI packages
 mkdir -p "$TREE/package/alphawrt"
