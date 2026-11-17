@@ -32,6 +32,7 @@ How this file is kept:
 - **Network work spread over more CPU cores:** wired and fibre traffic the box handles itself (for example the Speed test, VPN and DNS) was all processed on the first core; LAN now goes to the second core and fibre to the third, so the first core has room left under load.
 
 ### Fixed
+- **Internet comes up after a reboot on Unifi lines that needed the OLT profile switched by hand.** When the fibre registers but the provider doesn't answer the internet login (PPPoE) within a minute, the box restarts the fibre link once by itself ([#8](https://github.com/idiazraz/gn630v-alphawrt/issues/8)).
 - **IPv6 on Unifi (TM) and other PPPoE lines:** turning on IPv6 now asks the provider through a separate DHCPv6 client, which Unifi answers, instead of PPPoE's built-in way, which got no IPv6 on Unifi. Turn IPv6 off and on again on the Network page, or rerun Quick Setup, to switch an existing box over.
 - **System log filled with Pi-hole config errors** while the built-in Pi-hole was off and had never been turned on (for example when you use your own Pi-hole server). The status check no longer asks Pi-hole for its settings before it has any.
 - **The box could restart by itself on fibre**, about once every couple of days: a fault in the fibre driver's line-quality check crashed it. Fixed.
