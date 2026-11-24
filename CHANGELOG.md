@@ -43,6 +43,7 @@ How this file is kept:
 - **WireGuard could never be set up:** the VPN page sent you back to the login screen.
 - **Guest Wi-Fi had no internet:** with Pi-hole on, guest devices got no DNS server.
 - **Renaming many devices stopped the internet** until a reboot: the DNS and DHCP service gave up restarting. It now always comes back.
+- **A VLAN the fibre provider tags with a priority now passes traffic.** Some OLTs list a VLAN with a priority attached even when they only check the VLAN number; untagged-priority traffic on it was dropped, so a voice VLAN never got an address ([#7](https://github.com/idiazraz/gn630v-alphawrt/issues/7)).
 
 ### Known issues
 - The TEL (phone) port doesn't work yet: its chip isn't identified.
