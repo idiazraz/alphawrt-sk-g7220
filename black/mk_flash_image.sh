@@ -9,6 +9,8 @@ TREE=${1:-$HERE/../openwrt}
 OUT=${2:-$HERE/../backup/flash/sk-g7220-black-tclinux-factory.bin}
 KD="$TREE/build_dir/target-aarch64_cortex-a53_musl/linux-airoha_an7581"
 S="$TREE/staging_dir/host/bin"
+# mkimage -f calls dtc; a fresh VM has none, the kernel tree builds one
+PATH="$PATH:$(echo "$KD"/linux-*/scripts/dtc)"
 VER="AlphaWRT-$(cat "$TREE/version.buildinfo" 2>/dev/null || echo snapshot)"
 [ -f "$HERE/stock-fmt/prefix-2000.bin" ] || { echo "Missing stock-fmt/prefix-2000.bin: the first 0x2000 bytes of a stock Black image. It is vendor data, so it is not in git." >&2; exit 1; }
 tmp=$(mktemp -d)

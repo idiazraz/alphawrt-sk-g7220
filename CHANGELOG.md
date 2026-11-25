@@ -12,6 +12,7 @@ How this file is kept:
 ## Unreleased
 
 ### Added
+- **Half-bridge mode** in Quick Setup ("Fibre and your router"): the box does the internet login (PPPoE) and hands the public IP address to your own router (UniFi, MikroTik…) on the LAN port you pick, over DHCP. No double NAT, and you don't lose the box: IPTV, Wi-Fi and its other ports keep working. Your router also gets an IPv6 prefix. When the provider gives a new address, the box restarts that port so your router picks it up.
 - **Speed test** page: download, upload, ping and jitter, measured by the box itself against the nearest Speedtest.net servers, or one you pick. Wi-Fi and your own device don’t slow the result.
 - **Light and dark mode switch** in the Simple UI (sidebar, or the top bar on a phone) and in Advanced (LuCI): Auto follows your device, or pick Light or Dark. Both share the choice.
 - **Change the internet login** (PPPoE username and password) from the Network page, without running Quick Setup again.
@@ -30,8 +31,11 @@ How this file is kept:
 - **Every page tidied** on desktop and phone: the VPN page uses the same cards as the rest, Fibre charts are readable on a phone, and notes have an info icon.
 - **Home** names the encrypted DNS servers, and the **Wi-Fi page** points printers and older devices to WPA2 only.
 - **Network work spread over more CPU cores:** wired and fibre traffic the box handles itself (for example the Speed test, VPN and DNS) was all processed on the first core; LAN now goes to the second core and fibre to the third, so the first core has room left under load.
+- **Quick Setup is now one page.** After the first-time setup, Quick Setup shows every setting together with one Save, instead of walking through screen by screen. It no longer asks for a password: first-time setup asks only while the box has none.
 
 ### Fixed
+- **The web pages open over https:// again.** The box makes its own certificate, so the browser warns once that it is self-signed; http:// still works without the warning.
+- **LAN 5 keeps working after Quick Setup.** Quick Setup only knew LAN 1-4 and took LAN 5 out of the home network whenever it saved; it now uses every LAN port the box has, and LAN 5 can be picked as a port too.
 - **Internet comes up after a reboot on Unifi lines that needed the OLT profile switched by hand.** When the fibre registers but the provider doesn't answer the internet login (PPPoE) within a minute, the box restarts the fibre link once by itself ([#8](https://github.com/idiazraz/gn630v-alphawrt/issues/8)).
 - **IPv6 on Unifi (TM) and other PPPoE lines:** turning on IPv6 now asks the provider through a separate DHCPv6 client, which Unifi answers, instead of PPPoE's built-in way, which got no IPv6 on Unifi. Turn IPv6 off and on again on the Network page, or rerun Quick Setup, to switch an existing box over.
 - **System log filled with Pi-hole config errors** while the built-in Pi-hole was off and had never been turned on (for example when you use your own Pi-hole server). The status check no longer asks Pi-hole for its settings before it has any.
