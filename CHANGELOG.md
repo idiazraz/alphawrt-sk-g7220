@@ -34,6 +34,7 @@ How this file is kept:
 - **Quick Setup is now one page.** After the first-time setup, Quick Setup shows every setting together with one Save, instead of walking through screen by screen. It no longer asks for a password: first-time setup asks only while the box has none.
 
 ### Fixed
+- Fibre: on lines with several services (Unifi carries VLANs 500, 400, 600 and 209), a service set up through extended VLAN rules could be sent on another service's channel. Each one now goes only on its own (#7).
 - **The web pages open over https:// again.** The box makes its own certificate, so the browser warns once that it is self-signed; http:// still works without the warning.
 - **LAN 5 keeps working after Quick Setup.** Quick Setup only knew LAN 1-4 and took LAN 5 out of the home network whenever it saved; it now uses every LAN port the box has, and LAN 5 can be picked as a port too.
 - **Internet comes up after a reboot on Unifi lines that needed the OLT profile switched by hand.** When the fibre registers but the provider doesn't answer the internet login (PPPoE) within a minute, the box restarts the fibre link once by itself ([#8](https://github.com/idiazraz/gn630v-alphawrt/issues/8)).
